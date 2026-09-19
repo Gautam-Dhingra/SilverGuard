@@ -91,7 +91,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem(PROFILE_LOCAL_STORAGE_KEY, JSON.stringify(profile));
+      const serialized = JSON.stringify(profile);
+      const stored = localStorage.getItem(PROFILE_LOCAL_STORAGE_KEY);
+      if (stored !== serialized) {
+        localStorage.setItem(PROFILE_LOCAL_STORAGE_KEY, serialized);
+        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
+      }
     } catch (e) {
       console.error(e);
     }
@@ -99,7 +104,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, JSON.stringify(meds));
+      const serialized = JSON.stringify(meds);
+      const stored = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
+      if (stored !== serialized) {
+        localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, serialized);
+        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
+      }
     } catch (e) {
       console.error(e);
     }

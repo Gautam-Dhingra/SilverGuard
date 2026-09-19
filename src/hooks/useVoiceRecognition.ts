@@ -80,7 +80,10 @@ export function useVoiceRecognition({
       } else if (lower.includes('stop reading') || lower.includes('stop speech') || lower.includes('be quiet')) {
         onStopReading();
         setLastCommand('Stopped speech');
-      } else if (onTranscriptDictated) {
+      }
+
+      // Always dictate transcript to active/primary page input field if available
+      if (onTranscriptDictated && currentTranscript) {
         onTranscriptDictated(currentTranscript);
       }
     };

@@ -12,13 +12,15 @@ import {
   MessageSquare,
   X,
 } from 'lucide-react';
-import { FamilyUpdate } from '../types';
+import { FamilyUpdate, MedicationItem } from '../types';
 import { draftFamilyReply } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
+import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
 
 interface FamilyConnectorViewProps {
   highContrast: boolean;
   onReadAloud: (text: string) => void;
+  onNavigateToTab?: (tab: any) => void;
 }
 
 const LOCAL_STORAGE_KEY = 'silverguard_family_contacts_messages_v2';
@@ -26,6 +28,7 @@ const LOCAL_STORAGE_KEY = 'silverguard_family_contacts_messages_v2';
 export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
   highContrast,
   onReadAloud,
+  onNavigateToTab,
 }) => {
   const [updates, setUpdates] = useState<FamilyUpdate[]>(() => {
     try {
@@ -56,10 +59,18 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updates));
+      const serialized = JSON.stringify(updates);
+      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+      if (stored !== serialized) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, serialized);
+        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
+      }
     } catch (e) {
       console.error(e);
     }
+  }, [updates]);
+
+  useEffect(() => {
     if (updates.length > 0 && !activeUpdate) {
       setActiveUpdate(updates[0]);
     }
@@ -277,6 +288,47 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
                     label="Voice Input (Awaaz Se Bolen)"
                     highContrast={highContrast}
                   />
+                </div>
+
+                {/* Quick Shortcuts to Attach Medicine Status & Link to Companion */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  <button
+                    onClick={() => {
+                      try {
+                        const savedMeds = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
+                        if (savedMeds) {
+                          const medsList: MedicationItem[] = JSON.parse(savedMeds);
+                          const takenCount = medsList.filter((m) => m.takenToday).length;
+                          const totalCount = medsList.length;
+                          const statusNote = `Tell them I have taken ${takenCount} of ${totalCount} prescribed medicines today and am feeling good!`;
+                          setIntention((prev) => (prev ? `${prev}. ${statusNote}` : statusNote));
+                          onReadAloud('Attached today medication status to reply');
+                          return;
+                        }
+                      } catch (e) {
+                        console.error(e);
+                      }
+                      setIntention((prev) =>
+                        prev
+                          ? `${prev}. Tell them I took my medicines on time and feel good!`
+                          : 'Tell them I took my medicines on time and feel good!'
+                      );
+                    }}
+                    type="button"
+                    className="px-3.5 py-2 rounded-xl bg-amber-200 text-amber-950 font-bold text-xs sm:text-sm hover:bg-amber-300 border border-amber-400 cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>💊 Attach Today's Medicine Status</span>
+                  </button>
+
+                  {onNavigateToTab && (
+                    <button
+                      onClick={() => onNavigateToTab('companion')}
+                      type="button"
+                      className="px-3.5 py-2 rounded-xl bg-rose-200 text-rose-950 font-bold text-xs sm:text-sm hover:bg-rose-300 border border-rose-400 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span>🤖 Open Daily AI Helper</span>
+                    </button>
+                  )}
                 </div>
 
                 <input

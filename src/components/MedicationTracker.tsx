@@ -39,11 +39,37 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
 
   useEffect(() => {
     try {
-      localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, JSON.stringify(meds));
+      const serialized = JSON.stringify(meds);
+      const stored = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
+      if (stored !== serialized) {
+        localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, serialized);
+        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
+      }
     } catch (e) {
       console.error(e);
     }
   }, [meds]);
+
+  // Re-sync with localStorage if updated externally
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    window.addEventListener('storage', handleSync);
+    window.addEventListener('silverguard_data_updated', handleSync);
+    return () => {
+      window.removeEventListener('storage', handleSync);
+      window.removeEventListener('silverguard_data_updated', handleSync);
+    };
+  }, []);
 
   const [selectedTime, setSelectedTime] = useState<'all' | 'morning' | 'afternoon' | 'evening'>('all');
   const [aiQuestionMed, setAiQuestionMed] = useState<MedicationItem | null>(null);

@@ -94,6 +94,47 @@ export default function App() {
     }
   }, [activeTab, speak]);
 
+  const handleTranscriptDictated = useCallback((text: string) => {
+    if (!text) return;
+    let targetEl = document.activeElement as HTMLInputElement | HTMLTextAreaElement | null;
+
+    if (
+      !targetEl ||
+      (targetEl.tagName !== 'INPUT' && targetEl.tagName !== 'TEXTAREA') ||
+      targetEl.readOnly ||
+      targetEl.disabled
+    ) {
+      const pageInputs = Array.from(
+        document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          'main input[type="text"], main input:not([type]), main textarea, main input[type="search"]'
+        )
+      );
+      const visibleInput = pageInputs.find(
+        (el) => el.offsetWidth > 0 && el.offsetHeight > 0 && !el.disabled && !el.readOnly
+      );
+      if (visibleInput) {
+        targetEl = visibleInput;
+        targetEl.focus();
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    if (targetEl && (targetEl.tagName === 'INPUT' || targetEl.tagName === 'TEXTAREA')) {
+      const prototype =
+        targetEl.tagName === 'INPUT'
+          ? window.HTMLInputElement.prototype
+          : window.HTMLTextAreaElement.prototype;
+      const nativeSetter = Object.getOwnPropertyDescriptor(prototype, 'value')?.set;
+      if (nativeSetter) {
+        nativeSetter.call(targetEl, text);
+      } else {
+        targetEl.value = text;
+      }
+      targetEl.dispatchEvent(new Event('input', { bubbles: true }));
+      targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  }, []);
+
   const {
     isListening,
     transcript,
@@ -107,6 +148,7 @@ export default function App() {
     onDecreaseFontSize: handleDecreaseFontSize,
     onReadAloud: handleReadActivePage,
     onStopReading: stop,
+    onTranscriptDictated: handleTranscriptDictated,
   });
 
   // Handle keyboard navigation shortcuts (Alt+1 through Alt+7)
@@ -208,6 +250,7 @@ export default function App() {
           <FamilyConnectorView
             highContrast={settings.highContrast}
             onReadAloud={speak}
+            onNavigateToTab={handleNavigate}
           />
         )}
 

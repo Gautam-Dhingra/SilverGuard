@@ -14,14 +14,46 @@ export async function handleCompanionChat(messages: { role: 'user' | 'model'; pa
   const apiKey = process.env.GEMINI_API_KEY;
   const lastUserMsg = messages.length > 0 ? messages[messages.length - 1].parts[0]?.text || '' : '';
 
+  const getFallbackSuggestions = (userText: string) => {
+    const lower = userText.toLowerCase();
+    if (lower.includes('pill') || lower.includes('dawai') || lower.includes('medicine') || lower.includes('dose') || lower.includes('missed')) {
+      return [
+        'Aaj ki dawai schedule check karo',
+        'Missed medicine safety guidance',
+        'Family ko status update bhejo',
+      ];
+    }
+    if (lower.includes('scam') || lower.includes('bill') || lower.includes('bank') || lower.includes('sms') || lower.includes('fraud')) {
+      return [
+        'Is SMS alert safe or scam?',
+        'What are main scam red flags?',
+        'Who to call if suspicious?',
+      ];
+    }
+    if (lower.includes('doctor') || lower.includes('hospital') || lower.includes('appointment')) {
+      return [
+        'Doctor visit question checklist',
+        'Medication side effects to ask doctor',
+        'How to explain symptoms clearly',
+      ];
+    }
+    return [
+      'Aaj ki prescription medicines check karo',
+      'Family message reply draft karo',
+      'Mera daily routine kya hai?',
+    ];
+  };
+
   if (!apiKey) {
+    const text = `I am right here with you! ${
+      lastUserMsg.toLowerCase().includes('pill') || lastUserMsg.toLowerCase().includes('dose') || lastUserMsg.toLowerCase().includes('medication')
+        ? 'Regarding your medication: always consult your doctor or pharmacist before changing your dosage. I am here to help you keep track of your schedule safely.'
+        : 'I am here to help you read messages, check bills, organize doctor questions, or chat. You are doing great!'
+    }`;
     return {
       success: true,
-      text: `I am right here with you! ${
-        lastUserMsg.toLowerCase().includes('pill') || lastUserMsg.toLowerCase().includes('dose') || lastUserMsg.toLowerCase().includes('medication')
-          ? 'Regarding your medication: always consult your doctor or pharmacist before changing your dosage. I am here to help you keep track of your schedule safely.'
-          : 'I am here to help you read messages, check bills, organize doctor questions, or chat. You are doing great!'
-      }`
+      text,
+      suggestedActions: getFallbackSuggestions(lastUserMsg),
     };
   }
 
@@ -30,27 +62,49 @@ export async function handleCompanionChat(messages: { role: 'user' | 'model'; pa
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: [
-        { role: 'user', parts: [{ text: SENIOR_COMPANION_SYSTEM_PROMPT }] },
+        {
+          role: 'user',
+          parts: [
+            {
+              text: `${SENIOR_COMPANION_SYSTEM_PROMPT}\n\nIMPORTANT FORMAT REQUIREMENT: Respond in JSON format containing:\n1. "text": Your clear, warm, 2-3 sentence response in simple English/Hindi/Hinglish.\n2. "suggestedActions": An array of 3 short follow-up suggestion chips (e.g. ["Check morning pills", "Ask about side effects", "Send update to family"]).\n\nExample JSON structure:\n{\n  "text": "Your warm response here...",\n  "suggestedActions": ["Option 1", "Option 2", "Option 3"]\n}`
+            }
+          ]
+        },
         ...messages.map(m => ({
           role: m.role,
           parts: m.parts
         }))
       ],
       config: {
+        responseMimeType: 'application/json',
         temperature: 0.7,
-        maxOutputTokens: 600
+        maxOutputTokens: 700
       }
     });
 
-    return {
-      success: true,
-      text: response.text || "I'm right here with you! Could you please ask that again?"
-    };
+    const rawText = response.text || '';
+    try {
+      const parsed = JSON.parse(rawText);
+      return {
+        success: true,
+        text: parsed.text || rawText || "I'm right here with you! Could you please ask that again?",
+        suggestedActions: Array.isArray(parsed.suggestedActions) && parsed.suggestedActions.length > 0
+          ? parsed.suggestedActions
+          : getFallbackSuggestions(lastUserMsg)
+      };
+    } catch {
+      return {
+        success: true,
+        text: rawText || "I'm right here with you! Could you please ask that again?",
+        suggestedActions: getFallbackSuggestions(lastUserMsg)
+      };
+    }
   } catch (error: any) {
     console.warn('Companion Chat API warning (falling back gracefully):', error.message || error);
     return {
       success: true,
-      text: "I am right here with you! Everything is safe and secure. Please ask me any questions about your day, pills, or family!"
+      text: "I am right here with you! Everything is safe and secure. Please ask me any questions about your day, pills, or family!",
+      suggestedActions: getFallbackSuggestions(lastUserMsg)
     };
   }
 }

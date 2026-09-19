@@ -13,11 +13,21 @@ export async function sendCompanionChatMessage(messages: { role: 'user' | 'model
     }
 
     const data = await res.json();
-    return data.text || "I am right here with you! Could you please repeat that?";
+    return {
+      text: data.text || "I am right here with you! Could you please repeat that?",
+      suggestedActions: Array.isArray(data.suggestedActions) ? data.suggestedActions : []
+    };
   } catch (error: any) {
     console.error('Client Chat API Error:', error);
     // Graceful fallback response
-    return "I am right here with you! Everything is safe and secure. Please ask again or select one of the quick options above.";
+    return {
+      text: "I am right here with you! Everything is safe and secure. Please ask again or select one of the quick options above.",
+      suggestedActions: [
+        'Aaj ki prescription medicines check karo',
+        'Family message reply draft karo',
+        'Mera daily routine kya hai?'
+      ]
+    };
   }
 }
 

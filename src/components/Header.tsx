@@ -81,29 +81,6 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Voice Navigation Mic Quick Toggle */}
-          <button
-            onClick={onToggleVoiceNav}
-            type="button"
-            className={`flex items-center gap-2.5 min-h-[52px] px-4 py-2.5 rounded-xl font-bold transition-all text-base shadow-sm focus-visible:outline-none focus-visible:ring-4 ${
-              isListening
-                ? 'bg-emerald-600 text-white animate-pulse ring-4 ring-emerald-300'
-                : isHighContrast
-                ? 'bg-yellow-400 text-black hover:bg-yellow-300'
-                : 'bg-amber-700 text-white hover:bg-amber-800'
-            }`}
-            aria-label={isListening ? 'Stop listening for voice commands' : 'Start listening for voice commands'}
-          >
-            {isListening ? (
-              <Mic className="w-6 h-6 text-white" aria-hidden="true" />
-            ) : (
-              <MicOff className="w-6 h-6" aria-hidden="true" />
-            )}
-            <span className="hidden sm:inline">
-              {isListening ? 'Listening...' : 'Voice Commands'}
-            </span>
-          </button>
-
           {/* Voice Help Button */}
           <button
             onClick={onOpenVoiceHelp}

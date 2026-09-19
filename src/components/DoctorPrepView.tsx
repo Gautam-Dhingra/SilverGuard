@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Stethoscope,
   Plus,
@@ -10,6 +10,8 @@ import {
 } from 'lucide-react';
 import { generateDoctorPrepSheet } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
+import { MedicationItem } from '../types';
+import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
 
 interface DoctorPrepViewProps {
   highContrast: boolean;
@@ -22,15 +24,23 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
 }) => {
   const [symptoms, setSymptoms] = useState<string[]>([
     'Knee pain when taking stairs (Ghutne me dard)',
-    'Afternoon dizziness or tiredness after BP tablet',
+    'Mild tiredness or stiffness in morning',
   ]);
   const [newSymptom, setNewSymptom] = useState('');
 
-  const [medications] = useState<string[]>([
-    'Telmisartan 40mg (Blood Pressure / BP)',
-    'Glycomet 500mg (Blood Sugar / Diabetes)',
-    'Pantocid 40mg (Acidity)',
-  ]);
+  // Load real user-entered prescribed medicines from localStorage
+  const [medications, setMedications] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
+      if (saved) {
+        const parsed: MedicationItem[] = JSON.parse(saved);
+        return parsed.map((m) => `${m.name} (${m.dosage}) - ${m.instructions}`);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return [];
+  });
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [prepSheet, setPrepSheet] = useState<any | null>(null);
