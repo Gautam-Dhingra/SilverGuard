@@ -14,6 +14,7 @@ import {
 import { MedicationItem } from '../types';
 import { AudioInputButton } from './AudioInputButton';
 import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
+import { getSecure, saveSecure } from '../services/cryptoStorage';
 
 interface MedicationTrackerProps {
   highContrast: boolean;
@@ -26,42 +27,33 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
   onReadAloud,
   onNavigateToTab,
 }) => {
-  // Start empty or load user-provided prescribed medicines. NEVER auto-recommend or invent pills!
-  const [meds, setMeds] = useState<MedicationItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return []; // Empty by default!
-  });
+  const [meds, setMeds] = useState<MedicationItem[]>([]);
+
+  // Load user-provided prescribed medicines with zero-knowledge AES-256 decryption
+  useEffect(() => {
+    let active = true;
+    getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((res) => {
+      if (active && res) setMeds(res);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(meds);
-      const stored = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    saveSecure(MEDS_LOCAL_STORAGE_KEY, meds).then(() => {
+      window.dispatchEvent(new Event('silverguard_data_updated'));
+    });
   }, [meds]);
 
-  // Re-sync with localStorage if updated externally
+  // Re-sync with storage if updated externally
   useEffect(() => {
     const handleSync = () => {
-      try {
-        const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
+      getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((parsed) => {
+        if (parsed) {
           setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
         }
-      } catch (e) {
-        console.error(e);
-      }
+      });
     };
     window.addEventListener('storage', handleSync);
     window.addEventListener('silverguard_data_updated', handleSync);

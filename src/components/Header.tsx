@@ -9,6 +9,7 @@ import {
   Mic,
   MicOff,
   HelpCircle,
+  Lock,
 } from 'lucide-react';
 import { AccessibilitySettings } from '../types';
 
@@ -17,6 +18,7 @@ interface HeaderProps {
   onUpdateSettings: (newSettings: Partial<AccessibilitySettings>) => void;
   onOpenEmergencyModal: () => void;
   onOpenVoiceHelp: () => void;
+  onOpenGdprModal: () => void;
   isListening: boolean;
   onToggleVoiceNav: () => void;
   isSpeaking: boolean;
@@ -28,6 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
   onUpdateSettings,
   onOpenEmergencyModal,
   onOpenVoiceHelp,
+  onOpenGdprModal,
   isListening,
   onToggleVoiceNav,
   isSpeaking,
@@ -66,7 +69,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Global Action Bar: Emergency Contact & Accessibility Shortcuts */}
+        {/* Global Action Bar: Emergency Contact, Security & Accessibility Shortcuts */}
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
           {/* Active Speech Indicator & Stop Button */}
           {isSpeaking && (
@@ -80,6 +83,23 @@ export const Header: React.FC<HeaderProps> = ({
               <span>Stop Reading</span>
             </button>
           )}
+
+          {/* Zero-Knowledge Security & GDPR Vault Button */}
+          <button
+            onClick={onOpenGdprModal}
+            type="button"
+            className={`flex items-center gap-2 min-h-[52px] px-3.5 py-2.5 rounded-xl font-bold border-2 transition-all text-base focus-visible:outline-none focus-visible:ring-4 cursor-pointer ${
+              isHighContrast
+                ? 'border-emerald-400 bg-emerald-950 text-emerald-300 hover:bg-emerald-900'
+                : 'border-emerald-500 bg-emerald-700 text-white hover:bg-emerald-800 shadow-md'
+            }`}
+            aria-label="Open GDPR & Zero-Knowledge Security Center"
+          >
+            <Lock className="w-5 h-5 text-emerald-300 shrink-0" aria-hidden="true" />
+            <span className="text-xs sm:text-sm font-black uppercase tracking-wider">
+              AES-256 E2EE Vault
+            </span>
+          </button>
 
           {/* Voice Help Button */}
           <button

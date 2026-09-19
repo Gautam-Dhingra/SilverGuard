@@ -16,6 +16,7 @@ import { FamilyUpdate, MedicationItem } from '../types';
 import { draftFamilyReply } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
 import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
+import { getSecure, saveSecure } from '../services/cryptoStorage';
 
 interface FamilyConnectorViewProps {
   highContrast: boolean;
@@ -30,22 +31,21 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
   onReadAloud,
   onNavigateToTab,
 }) => {
-  const [updates, setUpdates] = useState<FamilyUpdate[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    // Default: Empty list or initial prompt (NO fake hardcoded random data)
-    return [];
-  });
+  const [updates, setUpdates] = useState<FamilyUpdate[]>([]);
 
-  const [activeUpdate, setActiveUpdate] = useState<FamilyUpdate | null>(
-    updates.length > 0 ? updates[0] : null
-  );
+  useEffect(() => {
+    let active = true;
+    getSecure<FamilyUpdate[]>(LOCAL_STORAGE_KEY, []).then((res) => {
+      if (active && res) {
+        setUpdates(res);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const [activeUpdate, setActiveUpdate] = useState<FamilyUpdate | null>(null);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newSenderName, setNewSenderName] = useState('');
@@ -58,16 +58,9 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(updates);
-      const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    saveSecure(LOCAL_STORAGE_KEY, updates).then(() => {
+      window.dispatchEvent(new Event('silverguard_data_updated'));
+    });
   }, [updates]);
 
   useEffect(() => {
@@ -293,11 +286,10 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
                 {/* Quick Shortcuts to Attach Medicine Status & Link to Companion */}
                 <div className="flex flex-wrap gap-2 pt-1">
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       try {
-                        const savedMeds = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-                        if (savedMeds) {
-                          const medsList: MedicationItem[] = JSON.parse(savedMeds);
+                        const medsList = await getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []);
+                        if (medsList && medsList.length > 0) {
                           const takenCount = medsList.filter((m) => m.takenToday).length;
                           const totalCount = medsList.length;
                           const statusNote = `Tell them I have taken ${takenCount} of ${totalCount} prescribed medicines today and am feeling good!`;

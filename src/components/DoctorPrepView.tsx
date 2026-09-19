@@ -12,6 +12,7 @@ import { generateDoctorPrepSheet } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
 import { MedicationItem } from '../types';
 import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
+import { getSecure } from '../services/cryptoStorage';
 
 interface DoctorPrepViewProps {
   highContrast: boolean;
@@ -28,19 +29,16 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
   ]);
   const [newSymptom, setNewSymptom] = useState('');
 
-  // Load real user-entered prescribed medicines from localStorage
-  const [medications, setMedications] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (saved) {
-        const parsed: MedicationItem[] = JSON.parse(saved);
-        return parsed.map((m) => `${m.name} (${m.dosage}) - ${m.instructions}`);
+  // Asynchronously load real user-entered prescribed medicines with zero-knowledge AES-256 decryption
+  const [medications, setMedications] = useState<string[]>([]);
+
+  useEffect(() => {
+    getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((saved) => {
+      if (saved && saved.length > 0) {
+        setMedications(saved.map((m) => `${m.name} (${m.dosage}) - ${m.instructions}`));
       }
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
+    });
+  }, []);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [prepSheet, setPrepSheet] = useState<any | null>(null);

@@ -20,6 +20,8 @@ export const AudioInputButton: React.FC<AudioInputButtonProps> = ({
   const [isSupported, setIsSupported] = useState(true);
   const recognitionRef = useRef<any>(null);
 
+  const isRecordingRef = useRef(false);
+
   useEffect(() => {
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -34,6 +36,11 @@ export const AudioInputButton: React.FC<AudioInputButtonProps> = ({
     recognition.interimResults = true;
     recognition.lang = language;
 
+    recognition.onstart = () => {
+      isRecordingRef.current = true;
+      setIsRecording(true);
+    };
+
     recognition.onresult = (event: any) => {
       let currentTranscript = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -46,10 +53,14 @@ export const AudioInputButton: React.FC<AudioInputButtonProps> = ({
 
     recognition.onerror = (event: any) => {
       console.warn('Audio input speech recognition error:', event.error);
-      setIsRecording(false);
+      if (event.error !== 'no-speech') {
+        isRecordingRef.current = false;
+        setIsRecording(false);
+      }
     };
 
     recognition.onend = () => {
+      isRecordingRef.current = false;
       setIsRecording(false);
     };
 
@@ -62,20 +73,29 @@ export const AudioInputButton: React.FC<AudioInputButtonProps> = ({
       return;
     }
 
-    if (isRecording) {
+    if (isRecording || isRecordingRef.current) {
       try {
         recognitionRef.current?.stop();
       } catch (e) {
         console.error(e);
+      } finally {
+        isRecordingRef.current = false;
+        setIsRecording(false);
       }
-      setIsRecording(false);
     } else {
       try {
         recognitionRef.current?.start();
+        isRecordingRef.current = true;
         setIsRecording(true);
-      } catch (e) {
-        console.error(e);
-        setIsRecording(false);
+      } catch (e: any) {
+        if (e.name === 'InvalidStateError' || e.message?.includes('already started')) {
+          isRecordingRef.current = true;
+          setIsRecording(true);
+        } else {
+          console.error(e);
+          isRecordingRef.current = false;
+          setIsRecording(false);
+        }
       }
     }
   };

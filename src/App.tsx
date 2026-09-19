@@ -12,6 +12,7 @@ import { Navigation } from './components/Navigation';
 import { VoiceCommandBar } from './components/VoiceCommandBar';
 import { EmergencyModal } from './components/EmergencyModal';
 import { VoiceHelpModal } from './components/VoiceHelpModal';
+import { GdprSecurityModal } from './components/GdprSecurityModal';
 
 import { CompanionView } from './components/CompanionView';
 import { ScamCheckerNav } from './components/ScamCheckerNav';
@@ -33,6 +34,7 @@ export default function App() {
 
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isVoiceHelpOpen, setIsVoiceHelpOpen] = useState(false);
+  const [isGdprOpen, setIsGdprOpen] = useState(false);
 
   const { speak, stop, isSpeaking } = useTextToSpeech(settings.speechRate);
 
@@ -188,6 +190,7 @@ export default function App() {
         onUpdateSettings={updateSettings}
         onOpenEmergencyModal={() => setIsEmergencyOpen(true)}
         onOpenVoiceHelp={() => setIsVoiceHelpOpen(true)}
+        onOpenGdprModal={() => setIsGdprOpen(true)}
         isListening={isListening}
         onToggleVoiceNav={toggleListening}
         isSpeaking={isSpeaking}
@@ -311,6 +314,13 @@ export default function App() {
       <VoiceHelpModal
         isOpen={isVoiceHelpOpen}
         onClose={() => setIsVoiceHelpOpen(false)}
+        highContrast={settings.highContrast}
+      />
+
+      {/* Zero-Knowledge & GDPR Security Center Modal */}
+      <GdprSecurityModal
+        isOpen={isGdprOpen}
+        onClose={() => setIsGdprOpen(false)}
         highContrast={settings.highContrast}
       />
     </div>
