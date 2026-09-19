@@ -13,6 +13,9 @@ import {
 import { ScamAnalysisResult } from '../types';
 import { analyzeScamOrBillContent } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
+import { getSecure, saveSecure } from '../services/cryptoStorage';
+
+export const SCAM_CHECKER_LOCAL_STORAGE_KEY = 'silverguard_scam_checks_v1';
 
 interface ScamCheckerNavProps {
   highContrast: boolean;
@@ -27,6 +30,14 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
   const [analysis, setAnalysis] = useState<ScamAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  React.useEffect(() => {
+    getSecure<ScamAnalysisResult | null>(SCAM_CHECKER_LOCAL_STORAGE_KEY, null).then((saved) => {
+      if (saved) {
+        setAnalysis(saved);
+      }
+    });
+  }, []);
 
   const sampleInputs = [
     {
@@ -57,6 +68,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
     try {
       const result = await analyzeScamOrBillContent(text);
       setAnalysis(result);
+      saveSecure(SCAM_CHECKER_LOCAL_STORAGE_KEY, result);
       onReadAloud(`${result.title}. ${result.simpleSummary}`);
     } catch (err) {
       console.error(err);
@@ -133,28 +145,6 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
               : 'bg-amber-50 border-amber-300 text-slate-900 placeholder:text-slate-400'
           }`}
         />
-
-        {/* Preset Sample Buttons */}
-        <div className="space-y-2">
-          <span className="text-sm sm:text-base font-bold opacity-80">
-            Or test with common Indian scam/bill examples:
-          </span>
-          <div className="flex flex-wrap gap-2">
-            {sampleInputs.map((sample, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setInputText(sample.text);
-                  handleAnalyze(sample.text);
-                }}
-                className="px-4 py-2.5 rounded-xl font-bold text-sm sm:text-base bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 min-h-[48px] cursor-pointer"
-              >
-                🔍 {sample.title}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <button
           onClick={() => handleAnalyze()}

@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   ShieldCheck,
   Lock,
-  Eye,
-  EyeOff,
   Download,
   Trash2,
   X,
-  CheckCircle2,
-  AlertTriangle,
-  Key,
   Server,
   FileCheck,
-  RefreshCw,
 } from 'lucide-react';
 import {
   exportAllUserDataGDPR,
   purgeAllUserDataGDPR,
-  getOrCreateVaultPass,
-  getSecure,
 } from '../services/cryptoStorage';
 
 interface GdprSecurityModalProps {
@@ -32,25 +24,7 @@ export const GdprSecurityModal: React.FC<GdprSecurityModalProps> = ({
   onClose,
   highContrast = false,
 }) => {
-  const [showPasskey, setShowPasskey] = useState(false);
-  const [showRawCipher, setShowRawCipher] = useState(false);
-  const [rawCiphertext, setRawCiphertext] = useState<string>('');
-  const [decryptedProfile, setDecryptedProfile] = useState<any>(null);
-  const [copiedPass, setCopiedPass] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-
-  const vaultPass = getOrCreateVaultPass();
-
-  useEffect(() => {
-    if (isOpen) {
-      const raw = localStorage.getItem('silverguard_user_profile_v2');
-      setRawCiphertext(raw || 'No raw data saved yet');
-
-      getSecure('silverguard_user_profile_v2', null).then((dec) => {
-        setDecryptedProfile(dec);
-      });
-    }
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -157,57 +131,6 @@ export const GdprSecurityModal: React.FC<GdprSecurityModalProps> = ({
               EU Regulation 2016/679 data portability & erasure tools built-in.
             </p>
           </div>
-        </div>
-
-        {/* Live Cipher Inspector */}
-        <div className="p-5 rounded-2xl border-2 border-slate-300 bg-slate-50 text-slate-900 space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-lg font-black flex items-center gap-2">
-              <Key className="w-5 h-5 text-amber-600" />
-              <span>Encrypted Storage Inspector (What Backend Admins See)</span>
-            </h3>
-
-            <button
-              onClick={() => setShowRawCipher(!showRawCipher)}
-              type="button"
-              className="text-xs font-black px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700 flex items-center gap-1 cursor-pointer"
-            >
-              {showRawCipher ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              <span>{showRawCipher ? 'Show Decrypted Memory' : 'Show Ciphertext Payload'}</span>
-            </button>
-          </div>
-
-          {showRawCipher ? (
-            <div className="p-3 bg-slate-900 text-amber-300 rounded-xl font-mono text-xs overflow-x-auto max-h-40 break-all border border-slate-700">
-              <p className="text-white font-bold mb-1">// Zero-Knowledge Ciphertext in storage:</p>
-              {rawCiphertext}
-            </div>
-          ) : (
-            <div className="p-3 bg-emerald-900 text-emerald-100 rounded-xl font-mono text-xs overflow-x-auto max-h-40 border border-emerald-700">
-              <p className="text-emerald-300 font-bold mb-1">// Decrypted in Browser RAM using device key:</p>
-              {decryptedProfile
-                ? JSON.stringify(decryptedProfile, null, 2)
-                : 'No profile details entered yet'}
-            </div>
-          )}
-        </div>
-
-        {/* Passkey */}
-        <div className="p-4 rounded-2xl border-2 border-amber-300 bg-amber-50/70 text-slate-900 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-black text-amber-950">Device Vault Encryption Token:</p>
-            <p className="text-xs font-mono font-bold opacity-80 break-all">
-              {showPasskey ? vaultPass : '••••••••••••••••••••••••••••••••'}
-            </p>
-          </div>
-
-          <button
-            onClick={() => setShowPasskey(!showPasskey)}
-            type="button"
-            className="px-3 py-2 rounded-xl text-xs font-bold bg-amber-200 text-amber-950 hover:bg-amber-300 cursor-pointer"
-          >
-            {showPasskey ? 'Hide Vault Token' : 'Reveal Vault Token'}
-          </button>
         </div>
 
         {/* GDPR Action Buttons */}

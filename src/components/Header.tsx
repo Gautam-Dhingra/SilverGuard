@@ -61,10 +61,10 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight leading-none">
-              SilverGuard India
+              SilverGuard AI
             </h1>
             <p className="text-sm sm:text-base font-semibold opacity-90 mt-0.5">
-              Voice AI Companion for Seniors (Dada-Dadi / Nana-Nani)
+              Intelligent Senior Daily Companion & Voice Assistant
             </p>
           </div>
         </div>

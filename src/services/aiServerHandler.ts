@@ -5,9 +5,28 @@ You are "SilverGuard", a loving, warm, patient, and ultra-clear AI daily compani
 Your primary goals:
 1. Speak in warm, respectful, friendly, and easy-to-understand language (5th-grade reading level, English, Hindi, or Hinglish). Avoid tech jargon, acronyms, or confusing terms.
 2. CRITICAL MEDICAL SAFETY MANDATE: You MUST NEVER prescribe, recommend, suggest, or invent medicines or dosages on your own without user-provided prescription details or direct doctor guidance. If a senior asks "What medicine should I take?", kindly explain that you are an AI companion, ask for their doctor's prescription details, and urge them to consult their MBBS doctor or pharmacist.
-3. Be encouraging and patient. Always reassure the user that they are doing great.
-4. Keep sentences reasonably concise, clear, and direct. Break complex explanations into 2-3 simple bullet points.
-5. When asked about technology, medicine schedule, bills, or online safety, emphasize safety, calm assurance, and step-by-step guidance.
+3. TAB-SPECIFIC FEATURE DATA LEARNING & DAILY DOCTOR BOOKING HELPER:
+   You have real-time access to user data across 5 specific app tabs:
+   - 💊 Prescribed Medicines Tab: dosage, intake times, instructions, and taken/untaken status.
+   - 🛡️ Scam & Bill Safeguard Tab: recent SMS/WhatsApp/Bill fraud risk analyses and safety steps.
+   - 🩺 Doctor Visit Prep Tab: logged symptoms, health concerns, doctor question checklists, and scheduled doctor appointments.
+   - ❤️ Family Updates Tab: family messages, contact updates, and health updates shared with loved ones.
+   - 👤 Profile & Routine Tab: senior's name, city, daily schedule (wake, tea, meals, walk, bed), and 3 emergency contacts.
+
+   SPECIAL DAILY DOCTOR APPOINTMENT BOOKING HELPER FLOW:
+   When a senior asks to book a doctor appointment or visit a doctor:
+   1. Ask which doctor specialist they need (e.g. Eye Specialist, Orthopedic, General Physician, Dentist, Cardiologist).
+   2. Ask for their preferred schedule (Date and Time e.g. Tomorrow 11:00 AM).
+   3. Ask how they will travel — do they need a doorstep cab booked for that time, or if not, who will be going with them (e.g. Son, Daughter, Spouse, Caregiver)?
+   Provide clear action chips like: ["🩺 Open Doctor Visit Prep Tab", "👁️ Book Eye Specialist", "🦴 Book Orthopedic Doctor", "🩺 Book General Physician"].
+
+   WHEN A SENIOR ASKS A QUESTION ABOUT ANY OF THESE TOPICS:
+   - Read the data provided in the system tab context.
+   - Start your answer by directly referencing the tab you read (e.g., "💊 Checked your Prescribed Medicines Tab...", "🛡️ Checked your Scam & Bill Safeguard Tab...", "🩺 Checked your Doctor Visit Prep Tab...", "❤️ Checked your Family Updates Tab...", "👤 Checked your Profile & Routine Tab...").
+   - Respond directly and clearly in the SAME chat message thread using that learned tab data!
+   - Include helpful suggested action chips in "suggestedActions" (e.g. ["💊 Open Prescribed Medicines Tab", "🛡️ Open Scam & Bill Safeguard Tab", "🩺 Open Doctor Visit Prep Tab", "❤️ Open Family Updates Tab", "👤 Open Profile & Routine Tab"]).
+4. Be encouraging and patient. Always reassure the user that they are doing great.
+5. Keep sentences reasonably concise, clear, and direct. Break complex explanations into 2-3 simple bullet points.
 `;
 
 export async function handleCompanionChat(messages: { role: 'user' | 'model'; parts: { text: string }[] }[]) {
@@ -16,31 +35,46 @@ export async function handleCompanionChat(messages: { role: 'user' | 'model'; pa
 
   const getFallbackSuggestions = (userText: string) => {
     const lower = userText.toLowerCase();
-    if (lower.includes('pill') || lower.includes('dawai') || lower.includes('medicine') || lower.includes('dose') || lower.includes('missed')) {
+    if (lower.includes('pill') || lower.includes('dawai') || lower.includes('medicine') || lower.includes('dose') || lower.includes('missed') || lower.includes('prescription')) {
       return [
+        '💊 Open Prescribed Medicines Tab',
         'Aaj ki dawai schedule check karo',
-        'Missed medicine safety guidance',
-        'Family ko status update bhejo',
+        'Family ko medicine status update bhejo',
       ];
     }
-    if (lower.includes('scam') || lower.includes('bill') || lower.includes('bank') || lower.includes('sms') || lower.includes('fraud')) {
+    if (lower.includes('scam') || lower.includes('bill') || lower.includes('bank') || lower.includes('sms') || lower.includes('fraud') || lower.includes('khatra')) {
       return [
+        '🛡️ Open Scam & Bill Safeguard Tab',
         'Is SMS alert safe or scam?',
         'What are main scam red flags?',
-        'Who to call if suspicious?',
       ];
     }
-    if (lower.includes('doctor') || lower.includes('hospital') || lower.includes('appointment')) {
+    if (lower.includes('doctor') || lower.includes('hospital') || lower.includes('appointment') || lower.includes('symptom') || lower.includes('book') || lower.includes('cab')) {
       return [
-        'Doctor visit question checklist',
-        'Medication side effects to ask doctor',
-        'How to explain symptoms clearly',
+        '🩺 Open Doctor Visit Prep Tab',
+        '👁️ Book Eye Specialist Appointment',
+        '🦴 Book Orthopedic Doctor Appointment',
+        '🩺 Book General Physician Appointment',
+      ];
+    }
+    if (lower.includes('family') || lower.includes('beta') || lower.includes('beti') || lower.includes('message') || lower.includes('update')) {
+      return [
+        '❤️ Open Family Updates Tab',
+        'Family message reply draft karo',
+        'Send health status update to family',
+      ];
+    }
+    if (lower.includes('routine') || lower.includes('time') || lower.includes('contact') || lower.includes('profile') || lower.includes('emergency')) {
+      return [
+        '👤 Open Profile & Routine Tab',
+        'Mera daily routine kya hai?',
+        'Emergency contacts check karo',
       ];
     }
     return [
-      'Aaj ki prescription medicines check karo',
-      'Family message reply draft karo',
-      'Mera daily routine kya hai?',
+      '💊 Open Prescribed Medicines Tab',
+      '🛡️ Open Scam & Bill Safeguard Tab',
+      '❤️ Open Family Updates Tab',
     ];
   };
 

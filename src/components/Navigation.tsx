@@ -70,13 +70,6 @@ export const Navigation: React.FC<NavigationProps> = ({
       icon: User,
       shortcutKey: '6',
     },
-    {
-      id: 'test-cases',
-      label: 'Test Cases',
-      sublabel: 'Evaluator Sandbox',
-      icon: FlaskConical,
-      shortcutKey: '7',
-    },
   ];
 
   return (
@@ -93,7 +86,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div
           role="tablist"
           aria-label="Senior companion navigation options"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 py-2.5"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 py-2.5"
         >
           {tabs.map((tab) => {
             const Icon = tab.icon;

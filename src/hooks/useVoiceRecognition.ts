@@ -9,6 +9,7 @@ interface VoiceRecognitionProps {
   onReadAloud: () => void;
   onStopReading: () => void;
   onTranscriptDictated?: (text: string) => void;
+  onAddMedicationVoice?: () => void;
 }
 
 export function useVoiceRecognition({
@@ -19,6 +20,7 @@ export function useVoiceRecognition({
   onReadAloud,
   onStopReading,
   onTranscriptDictated,
+  onAddMedicationVoice,
 }: VoiceRecognitionProps) {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -56,7 +58,23 @@ export function useVoiceRecognition({
       const lower = currentTranscript.toLowerCase().trim();
 
       // Check navigation and action commands
-      if (lower.includes('go to companion') || lower.includes('go to chat') || lower.includes('home')) {
+      if (
+        lower.includes('add medication') ||
+        lower.includes('add medicine') ||
+        lower.includes('add a new medication') ||
+        lower.includes('add new medicine') ||
+        lower.includes('dawai add') ||
+        lower.includes('nayi dawai') ||
+        lower.includes('nayi medicine')
+      ) {
+        if (onAddMedicationVoice) {
+          onAddMedicationVoice();
+          setLastCommand('Opened Voice Medication Setup');
+        } else {
+          onNavigate('medications');
+          setLastCommand('Navigated to Medication Schedule');
+        }
+      } else if (lower.includes('go to companion') || lower.includes('go to chat') || lower.includes('home')) {
         onNavigate('companion');
         setLastCommand('Navigated to Companion');
       } else if (lower.includes('scam') || lower.includes('check bill') || lower.includes('go to scam')) {

@@ -22,12 +22,35 @@ import {
   Clock,
   Bell,
 } from 'lucide-react';
-import { ChatMessage, MedicationItem, FamilyUpdate, SeniorUserProfile } from '../types';
+import { ChatMessage, MedicationItem, FamilyUpdate, SeniorUserProfile, NavigationTab } from '../types';
 import { sendCompanionChatMessage } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
+import { VoiceAddMedicationModal } from './VoiceAddMedicationModal';
 import { MEDS_LOCAL_STORAGE_KEY, PROFILE_LOCAL_STORAGE_KEY } from './UserProfileView';
+import { getSecure, saveSecure } from '../services/cryptoStorage';
+
+import { DOCTOR_PREP_LOCAL_STORAGE_KEY } from './DoctorPrepView';
+import { SCAM_CHECKER_LOCAL_STORAGE_KEY } from './ScamCheckerNav';
+import { ScamAnalysisResult } from '../types';
+import { DoctorAppointmentBookingHelper } from './DoctorAppointmentBookingHelper';
 
 const FAMILY_LOCAL_STORAGE_KEY = 'silverguard_family_contacts_messages_v2';
+
+const defaultProfile: SeniorUserProfile = {
+  seniorName: '',
+  city: 'India',
+  dailyRoutine: {
+    wakeupTime: '06:30 AM',
+    breakfastTime: '08:30 AM',
+    lunchTime: '01:30 PM',
+    eveningWalkTime: '05:30 PM',
+    dinnerTime: '08:30 PM',
+    bedTime: '10:00 PM',
+    bpSugarCheckTime: 'Every morning after tea',
+    specialNotes: 'Low salt diet',
+  },
+  emergencyContacts: [],
+};
 
 interface CompanionViewProps {
   highContrast: boolean;
@@ -46,77 +69,72 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
     'hi-IN' | 'en-IN' | 'ta-IN' | 'te-IN' | 'bn-IN' | 'mr-IN' | 'gu-IN' | 'pa-IN' | 'kn-IN' | 'ml-IN'
   >('hi-IN');
 
-  // Load Senior Profile & Routine from LocalStorage
-  const [profile, setProfile] = useState<SeniorUserProfile>(() => {
-    try {
-      const saved = localStorage.getItem(PROFILE_LOCAL_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return {
-      seniorName: '',
-      city: 'India',
-      dailyRoutine: {
-        wakeupTime: '06:30 AM',
-        breakfastTime: '08:30 AM',
-        lunchTime: '01:30 PM',
-        eveningWalkTime: '05:30 PM',
-        dinnerTime: '08:30 PM',
-        bedTime: '10:00 PM',
-        bpSugarCheckTime: 'Every morning after tea',
-        specialNotes: 'Low salt diet',
-      },
-      emergencyContacts: [],
+  const [profile, setProfile] = useState<SeniorUserProfile>(defaultProfile);
+  const [meds, setMeds] = useState<MedicationItem[]>([]);
+  const [familyUpdates, setFamilyUpdates] = useState<FamilyUpdate[]>([]);
+  const [doctorSymptoms, setDoctorSymptoms] = useState<string[]>([]);
+  const [scamLastCheck, setScamLastCheck] = useState<ScamAnalysisResult | null>(null);
+  const isLoadedRef = useRef(false);
+
+  // Load encrypted data safely on initial mount across all 5 app tabs
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      getSecure<SeniorUserProfile>(PROFILE_LOCAL_STORAGE_KEY, defaultProfile),
+      getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []),
+      getSecure<FamilyUpdate[]>(FAMILY_LOCAL_STORAGE_KEY, []),
+      getSecure<string[]>(DOCTOR_PREP_LOCAL_STORAGE_KEY, []),
+      getSecure<ScamAnalysisResult | null>(SCAM_CHECKER_LOCAL_STORAGE_KEY, null),
+    ]).then(([p, m, f, d, s]) => {
+      if (active) {
+        if (p) setProfile(p);
+        setMeds(Array.isArray(m) ? m : []);
+        setFamilyUpdates(Array.isArray(f) ? f : []);
+        setDoctorSymptoms(Array.isArray(d) ? d : []);
+        if (s) setScamLastCheck(s);
+        isLoadedRef.current = true;
+      }
+    });
+    return () => {
+      active = false;
     };
-  });
+  }, []);
 
-  // Load Medications from LocalStorage
-  const [meds, setMeds] = useState<MedicationItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
-
-  // Load Family Updates from LocalStorage
-  const [familyUpdates, setFamilyUpdates] = useState<FamilyUpdate[]>(() => {
-    try {
-      const saved = localStorage.getItem(FAMILY_LOCAL_STORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch (e) {
-      console.error(e);
-    }
-    return [];
-  });
-
-  // Re-sync state across all tabs whenever storage or custom silverguard_data_updated event fires
+  // Re-sync state across all 5 tabs whenever storage or custom silverguard_data_updated event fires
   useEffect(() => {
     const handleSync = () => {
-      try {
-        const savedMeds = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-        if (savedMeds) {
-          const parsed = JSON.parse(savedMeds);
-          setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
+      getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((parsed) => {
+        if (parsed) {
+          const safeParsed = Array.isArray(parsed) ? parsed : [];
+          setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(safeParsed) ? prev : safeParsed));
         }
+      });
 
-        const savedProfile = localStorage.getItem(PROFILE_LOCAL_STORAGE_KEY);
-        if (savedProfile) {
-          const parsed = JSON.parse(savedProfile);
+      getSecure<SeniorUserProfile>(PROFILE_LOCAL_STORAGE_KEY, defaultProfile).then((parsed) => {
+        if (parsed) {
           setProfile((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
         }
+      });
 
-        const savedFamily = localStorage.getItem(FAMILY_LOCAL_STORAGE_KEY);
-        if (savedFamily) {
-          const parsed = JSON.parse(savedFamily);
-          setFamilyUpdates((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
+      getSecure<FamilyUpdate[]>(FAMILY_LOCAL_STORAGE_KEY, []).then((parsed) => {
+        if (parsed) {
+          const safeParsed = Array.isArray(parsed) ? parsed : [];
+          setFamilyUpdates((prev) => (JSON.stringify(prev) === JSON.stringify(safeParsed) ? prev : safeParsed));
         }
-      } catch (e) {
-        console.error(e);
-      }
+      });
+
+      getSecure<string[]>(DOCTOR_PREP_LOCAL_STORAGE_KEY, []).then((parsed) => {
+        if (parsed) {
+          const safeParsed = Array.isArray(parsed) ? parsed : [];
+          setDoctorSymptoms((prev) => (JSON.stringify(prev) === JSON.stringify(safeParsed) ? prev : safeParsed));
+        }
+      });
+
+      getSecure<ScamAnalysisResult | null>(SCAM_CHECKER_LOCAL_STORAGE_KEY, null).then((parsed) => {
+        if (parsed) {
+          setScamLastCheck(parsed);
+        }
+      });
     };
 
     window.addEventListener('storage', handleSync);
@@ -127,31 +145,15 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
     };
   }, []);
 
-  // Save changes to LocalStorage and trigger event ONLY if changed (deferred to avoid synchronous re-render loops)
+  // Save changes securely ONLY after initial load completes
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(meds);
-      const stored = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    if (!isLoadedRef.current) return;
+    saveSecure(MEDS_LOCAL_STORAGE_KEY, Array.isArray(meds) ? meds : []);
   }, [meds]);
 
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(familyUpdates);
-      const stored = localStorage.getItem(FAMILY_LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(FAMILY_LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    if (!isLoadedRef.current) return;
+    saveSecure(FAMILY_LOCAL_STORAGE_KEY, Array.isArray(familyUpdates) ? familyUpdates : []);
   }, [familyUpdates]);
 
   // Modals for adding medicine & family update from Daily Helper
@@ -183,6 +185,8 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatSectionRef = useRef<HTMLDivElement>(null);
+  const bookingHelperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -252,9 +256,12 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
   };
 
   // Helper to send 1-click status update to Family
+  const safeMeds = Array.isArray(meds) ? meds : [];
+  const safeFamilyUpdates = Array.isArray(familyUpdates) ? familyUpdates : [];
+
   const handleShareMedStatusWithFamily = () => {
-    const takenCount = meds.filter((m) => m.takenToday).length;
-    const totalCount = meds.length;
+    const takenCount = safeMeds.filter((m) => m.takenToday).length;
+    const totalCount = safeMeds.length;
     const updateText = `Pranam! Health Update: I have taken ${takenCount} of ${totalCount} prescribed medicines today. Feeling good and active!`;
 
     const statusItem: FamilyUpdate = {
@@ -266,12 +273,12 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
       unread: false,
     };
 
-    setFamilyUpdates((prev) => [statusItem, ...prev]);
+    setFamilyUpdates((prev) => [statusItem, ...(Array.isArray(prev) ? prev : [])]);
     onReadAloud('Shared your medication status to Family Updates!');
   };
 
   // Calculate missed/pending medications based on time of day and routine
-  const pendingMeds = meds.filter((m) => !m.takenToday);
+  const pendingMeds = safeMeds.filter((m) => !m.takenToday);
 
   const getRoutineSlotForMed = (timeOfDay: string) => {
     switch (timeOfDay) {
@@ -288,11 +295,52 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
     }
   };
 
-  const chatSectionRef = useRef<HTMLDivElement>(null);
+  const detectTargetTab = (text: string): { tab: NavigationTab; label: string } | null => {
+    const lower = text.toLowerCase();
+    if (lower.includes('prescribed medicine') || lower.includes('dawai') || lower.includes('pill') || lower.includes('medication')) {
+      return { tab: 'medications', label: 'Prescribed Medicines' };
+    }
+    if (lower.includes('scam') || lower.includes('bill safeguard') || lower.includes('khatra') || lower.includes('sms') || lower.includes('fraud')) {
+      return { tab: 'scam-checker', label: 'Scam & Bill Safeguard' };
+    }
+    if (lower.includes('doctor') || lower.includes('appointment') || lower.includes('symptom') || lower.includes('hospital')) {
+      return { tab: 'doctor-prep', label: 'Doctor Visit Prep' };
+    }
+    if (lower.includes('family') || lower.includes('child') || lower.includes('beta') || lower.includes('beti') || lower.includes('message')) {
+      return { tab: 'family-social', label: 'Family Updates' };
+    }
+    if (lower.includes('profile') || lower.includes('routine') || lower.includes('emergency contact') || lower.includes('subah') || lower.includes('wake')) {
+      return { tab: 'profile', label: 'Profile & Routine' };
+    }
+    return null;
+  };
 
   const handleSend = async (textToSend?: string) => {
     const text = textToSend || input;
     if (!text.trim() || isLoading) return;
+
+    // Handle direct Tab Jump Commands ONLY for explicit tab chips
+    if (text === '💊 Open Prescribed Medicines Tab') {
+      onNavigateToTab('medications');
+      return;
+    }
+    if (text === '🛡️ Open Scam & Bill Safeguard Tab') {
+      onNavigateToTab('scam-checker');
+      return;
+    }
+    if (text === '❤️ Open Family Updates Tab') {
+      onNavigateToTab('family-social');
+      return;
+    }
+    if (text === '👤 Open Profile & Routine Tab') {
+      onNavigateToTab('profile');
+      return;
+    }
+
+    // DOCTOR BOOKING MANDATE: Keep inside Daily Helper only (no tab switching)
+    if (text.toLowerCase().includes('book') || text.toLowerCase().includes('appointment') || text.toLowerCase().includes('doctor') || text.toLowerCase().includes('specialist') || text.toLowerCase().includes('ortho') || text.toLowerCase().includes('eye')) {
+      bookingHelperRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     chatSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -314,16 +362,33 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
         parts: [{ text: m.text }],
       }));
 
-    // Inject Context about user's real profile, routine, medicines, and family updates
-    const contextPrefix = `[System Context: Senior Name: "${profile.seniorName || 'Senior'}", Daily Routine: Breakfast ${profile.dailyRoutine.breakfastTime}, Lunch ${profile.dailyRoutine.lunchTime}, Dinner ${profile.dailyRoutine.dinnerTime}. User has ${meds.length} prescribed medicines. Pending untaken medicines right now: ${
-      pendingMeds.length > 0
-        ? pendingMeds.map((m) => `${m.name} (${m.dosage}, ${m.timeOfDay} around ${getRoutineSlotForMed(m.timeOfDay)})`).join(', ')
-        : 'None! All taken for today.'
-    }. Latest family update: ${
-      familyUpdates[0]
-        ? `From ${familyUpdates[0].senderName}: "${familyUpdates[0].message}"`
-        : 'None'
-    }] `;
+    // Inject rich real-time context from all 5 feature tabs
+    const medsDetails = safeMeds.length > 0
+      ? safeMeds.map((m) => `${m.name} (${m.dosage}, ${m.timeOfDay}) - Taken today: ${m.takenToday ? 'Yes' : 'No'}`).join('; ')
+      : 'No prescribed medicines added yet';
+
+    const scamDetails = scamLastCheck
+      ? `Last check: "${scamLastCheck.title}" (Risk: ${scamLastCheck.riskLevel}, Score: ${scamLastCheck.riskScore}/100) - Summary: ${scamLastCheck.simpleSummary}`
+      : 'No recent scam/bill check analyzed yet';
+
+    const doctorDetails = doctorSymptoms.length > 0
+      ? `Logged health concerns/symptoms: ${doctorSymptoms.join('; ')}`
+      : 'No symptoms logged yet';
+
+    const familyDetails = safeFamilyUpdates.length > 0
+      ? safeFamilyUpdates.map((f) => `From ${f.senderName} (${f.relation}): "${f.message}" (${f.date})`).join('; ')
+      : 'No family updates received yet';
+
+    const profileDetails = `Senior Name: "${profile.seniorName || 'Not specified'}", City: "${profile.city || 'India'}", Wakeup: ${profile.dailyRoutine?.wakeupTime || '06:30 AM'}, Breakfast: ${profile.dailyRoutine?.breakfastTime || '08:30 AM'}, Lunch: ${profile.dailyRoutine?.lunchTime || '01:30 PM'}, Walk: ${profile.dailyRoutine?.eveningWalkTime || '05:30 PM'}, Dinner: ${profile.dailyRoutine?.dinnerTime || '08:30 PM'}, Bedtime: ${profile.dailyRoutine?.bedTime || '10:00 PM'}, Notes: "${profile.dailyRoutine?.specialNotes || 'None'}", Emergency Contacts: ${profile.emergencyContacts?.map((c) => `${c.name} (${c.relation}, ${c.phone})`).join(', ') || 'None'}`;
+
+    const contextPrefix = `[System Real-Time 5-Tab Data Context:
+1. 💊 Prescribed Medicines Tab: ${medsDetails}
+2. 🛡️ Scam & Bill Safeguard Tab: ${scamDetails}
+3. 🩺 Doctor Visit Prep Tab: ${doctorDetails}
+4. ❤️ Family Updates Tab: ${familyDetails}
+5. 👤 Profile & Routine Tab: ${profileDetails}
+
+MANDATE FOR RESPONSE: If the senior asks a question about medicines, scams/bills, doctor visits/symptoms, family notes, or daily routines/contacts, you MUST start your response by explicitly stating which tab you read (e.g., "💊 Checked your Prescribed Medicines Tab...", "🛡️ Checked your Scam & Bill Safeguard Tab...", "🩺 Checked your Doctor Visit Prep Tab...", "❤️ Checked your Family Updates Tab...", "👤 Checked your Profile & Routine Tab...") and answer directly using this learned tab data in this chat thread!] `;
 
     history.push({
       role: 'user',
@@ -471,6 +536,14 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Interactive Daily Doctor Appointment Booking Helper inside Daily Helper */}
+      <div ref={bookingHelperRef}>
+        <DoctorAppointmentBookingHelper
+          highContrast={highContrast}
+          onReadAloud={onReadAloud}
+        />
+      </div>
 
       {/* Interactive Daily Helper Quick Sync Hub: Family & Medications */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -737,32 +810,7 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
           </div>
         </div>
 
-        {/* Quick Topic AI Suggestion Chips */}
-        <div className="space-y-2 p-3.5 rounded-2xl bg-amber-50/80 border-2 border-amber-200">
-          <p className="text-xs sm:text-sm font-extrabold flex items-center gap-1.5 text-amber-950">
-            <Sparkles className="w-4 h-4 text-amber-700" />
-            <span>AI Quick Prompts — Click any suggestion to ask instantly:</span>
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {[
-              { label: '💊 Aaj ki dawai schedule batao', prompt: 'Aaj ki meri dawai aur schedule batao.' },
-              { label: '🚨 Is this SMS or bill a scam?', prompt: 'Electricity bill ya SMS scam check karne me help karo.' },
-              { label: '❤️ Draft WhatsApp reply to family', prompt: 'Family ko pyaara WhatsApp message reply draft karo.' },
-              { label: '🩺 Doctor Visit Questions Guide', prompt: 'Doctor se milne se pehle mujhe kya poochhna chahiye?' },
-              { label: '☀️ What is my daily routine?', prompt: 'Mera daily routine aur times batao.' },
-            ].map((chip, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(chip.prompt)}
-                disabled={isLoading}
-                type="button"
-                className="px-3 py-1.5 rounded-xl font-bold text-xs sm:text-sm bg-white text-amber-950 hover:bg-amber-100 border border-amber-300 disabled:opacity-50 flex items-center gap-1 cursor-pointer shadow-xs transition-transform active:scale-95"
-              >
-                <span>{chip.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* Message Cards */}
         <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2">
@@ -810,16 +858,29 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
                   {/* Quick Action Suggestion Chips */}
                   {msg.suggestedActions && (
                     <div className="pt-2 flex flex-wrap gap-2">
-                      {msg.suggestedActions.map((action, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSend(action)}
-                          type="button"
-                          className="px-4 py-2.5 rounded-xl font-bold text-base bg-amber-200 text-amber-950 hover:bg-amber-300 min-h-[48px] border border-amber-400 focus-visible:ring-4 cursor-pointer"
-                        >
-                          👉 {action}
-                        </button>
-                      ))}
+                      {msg.suggestedActions.map((action, idx) => {
+                        const target = detectTargetTab(action);
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => {
+                              if (target) {
+                                onNavigateToTab(target.tab);
+                              } else {
+                                handleSend(action);
+                              }
+                            }}
+                            type="button"
+                            className={`px-4 py-2.5 rounded-xl font-bold text-base min-h-[48px] border focus-visible:ring-4 cursor-pointer transition-transform active:scale-95 ${
+                              target
+                                ? 'bg-amber-600 text-white hover:bg-amber-700 border-amber-800 shadow-md'
+                                : 'bg-amber-200 text-amber-950 hover:bg-amber-300 border-amber-400'
+                            }`}
+                          >
+                            {target ? `🚀 ${action}` : `👉 ${action}`}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
 
@@ -893,101 +954,16 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
           </div>
         </div>
       </div>
-      {/* Modal 1: Add Prescribed Medicine directly from Daily Helper */}
-      {isAddMedModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
-        >
-          <div
-            className={`w-full max-w-xl rounded-3xl p-6 sm:p-8 border-4 shadow-2xl space-y-6 ${
-              highContrast
-                ? 'bg-black text-yellow-300 border-yellow-400'
-                : 'bg-white text-slate-900 border-emerald-500'
-            }`}
-          >
-            <div className="flex items-center justify-between border-b pb-4">
-              <div className="flex items-center gap-3">
-                <Pill className="w-8 h-8 text-emerald-600" />
-                <h3 className="text-2xl font-black">Add Prescribed Medicine</h3>
-              </div>
-              <button
-                onClick={() => setIsAddMedModalOpen(false)}
-                type="button"
-                className="p-2 rounded-xl border-2 hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddMedFromHelper} className="space-y-4">
-              <div>
-                <label className="block text-base font-extrabold mb-1">
-                  Medicine Name (Doctor prescribed)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    required
-                    value={newMedName}
-                    onChange={(e) => setNewMedName(e.target.value)}
-                    placeholder="e.g. Telmisartan or Glycomet"
-                    className="flex-1 p-3 rounded-xl border-2 font-bold text-lg bg-white border-slate-300"
-                  />
-                  <AudioInputButton
-                    onTranscript={(t) => setNewMedName(t)}
-                    label="Mic"
-                    highContrast={highContrast}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-base font-extrabold mb-1">Dosage</label>
-                  <input
-                    type="text"
-                    value={newMedDosage}
-                    onChange={(e) => setNewMedDosage(e.target.value)}
-                    placeholder="e.g. 1 tablet (40mg)"
-                    className="w-full p-3 rounded-xl border-2 font-bold text-lg bg-white border-slate-300"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-base font-extrabold mb-1">Time of Day</label>
-                  <select
-                    value={newMedTimeOfDay}
-                    onChange={(e: any) => setNewMedTimeOfDay(e.target.value)}
-                    className="w-full p-3 rounded-xl border-2 font-bold text-lg bg-white border-slate-300 cursor-pointer"
-                  >
-                    <option value="morning">Morning (Subah)</option>
-                    <option value="afternoon">Afternoon (Dopahar)</option>
-                    <option value="evening">Evening (Shaam)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddMedModalOpen(false)}
-                  className="flex-1 py-3 rounded-xl font-extrabold text-base border-2 border-slate-300 hover:bg-slate-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 rounded-xl font-extrabold text-base bg-emerald-700 text-white hover:bg-emerald-800 cursor-pointer"
-                >
-                  Save Medicine
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Voice Guided Modal to Add Prescribed Medicine directly from Daily Helper */}
+      <VoiceAddMedicationModal
+        isOpen={isAddMedModalOpen}
+        onClose={() => setIsAddMedModalOpen(false)}
+        highContrast={highContrast}
+        onReadAloud={onReadAloud}
+        onMedicationAdded={(newPill) => {
+          setMeds((prev) => [newPill, ...prev]);
+        }}
+      />
 
       {/* Modal 2: Add Family Message/Update directly from Daily Helper */}
       {isAddFamilyMsgOpen && (

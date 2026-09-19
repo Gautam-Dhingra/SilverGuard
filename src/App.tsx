@@ -21,6 +21,7 @@ import { DoctorPrepView } from './components/DoctorPrepView';
 import { FamilyConnectorView } from './components/FamilyConnectorView';
 import { UserProfileView } from './components/UserProfileView';
 import { TestCaseSandboxView } from './components/TestCaseSandboxView';
+import { VoiceAddMedicationModal } from './components/VoiceAddMedicationModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavigationTab>('companion');
@@ -35,8 +36,14 @@ export default function App() {
   const [isEmergencyOpen, setIsEmergencyOpen] = useState(false);
   const [isVoiceHelpOpen, setIsVoiceHelpOpen] = useState(false);
   const [isGdprOpen, setIsGdprOpen] = useState(false);
+  const [isGlobalVoiceMedModalOpen, setIsGlobalVoiceMedModalOpen] = useState(false);
 
   const { speak, stop, isSpeaking } = useTextToSpeech(settings.speechRate);
+
+  const handleOpenVoiceMedAdder = useCallback(() => {
+    setActiveTab('medications');
+    setIsGlobalVoiceMedModalOpen(true);
+  }, []);
 
   const updateSettings = (newPartial: Partial<AccessibilitySettings>) => {
     setSettings((prev) => ({ ...prev, ...newPartial }));
@@ -151,6 +158,7 @@ export default function App() {
     onReadAloud: handleReadActivePage,
     onStopReading: stop,
     onTranscriptDictated: handleTranscriptDictated,
+    onAddMedicationVoice: handleOpenVoiceMedAdder,
   });
 
   // Handle keyboard navigation shortcuts (Alt+1 through Alt+7)
@@ -322,6 +330,14 @@ export default function App() {
         isOpen={isGdprOpen}
         onClose={() => setIsGdprOpen(false)}
         highContrast={settings.highContrast}
+      />
+
+      {/* Global Voice Guided Medication Setup Modal */}
+      <VoiceAddMedicationModal
+        isOpen={isGlobalVoiceMedModalOpen}
+        onClose={() => setIsGlobalVoiceMedModalOpen(false)}
+        highContrast={settings.highContrast}
+        onReadAloud={speak}
       />
     </div>
   );

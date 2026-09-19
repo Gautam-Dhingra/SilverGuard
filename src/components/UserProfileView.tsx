@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   User,
   Clock,
@@ -22,6 +22,8 @@ import {
 } from '../types';
 import { AudioInputButton } from './AudioInputButton';
 
+import { getSecure, saveSecure } from '../services/cryptoStorage';
+
 interface UserProfileViewProps {
   highContrast: boolean;
   onReadAloud: (text: string) => void;
@@ -31,50 +33,54 @@ interface UserProfileViewProps {
 export const PROFILE_LOCAL_STORAGE_KEY = 'silverguard_user_profile_v2';
 export const MEDS_LOCAL_STORAGE_KEY = 'silverguard_user_medications_v2';
 
+const defaultProfile: SeniorUserProfile = {
+  seniorName: '',
+  city: 'India',
+  dailyRoutine: {
+    wakeupTime: '06:30 AM',
+    breakfastTime: '08:30 AM',
+    lunchTime: '01:30 PM',
+    eveningWalkTime: '05:30 PM',
+    dinnerTime: '08:30 PM',
+    bedTime: '10:00 PM',
+    bpSugarCheckTime: 'Every morning after tea',
+    specialNotes: 'Low salt diet, 30 min gentle walk',
+  },
+  emergencyContacts: [], // Requires at least 3
+};
+
 export const UserProfileView: React.FC<UserProfileViewProps> = ({
   highContrast,
   onReadAloud,
   onNavigateToTab,
 }) => {
-  // Load profile from localStorage
-  const [profile, setProfile] = useState<SeniorUserProfile>(() => {
-    try {
-      const saved = localStorage.getItem(PROFILE_LOCAL_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return {
-      seniorName: '',
-      city: 'India',
-      dailyRoutine: {
-        wakeupTime: '06:30 AM',
-        breakfastTime: '08:30 AM',
-        lunchTime: '01:30 PM',
-        eveningWalkTime: '05:30 PM',
-        dinnerTime: '08:30 PM',
-        bedTime: '10:00 PM',
-        bpSugarCheckTime: 'Every morning after tea',
-        specialNotes: 'Low salt diet, 30 min gentle walk',
-      },
-      emergencyContacts: [], // Requires at least 3
-    };
-  });
+  const [profile, setProfile] = useState<SeniorUserProfile>(defaultProfile);
+  const [meds, setMeds] = useState<MedicationItem[]>([]);
+  const isLoadedRef = useRef(false);
 
-  // Load medicines from localStorage
-  const [meds, setMeds] = useState<MedicationItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
+  // Load profile and meds securely on initial mount
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      getSecure<SeniorUserProfile>(PROFILE_LOCAL_STORAGE_KEY, defaultProfile),
+      getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []),
+    ]).then(([p, m]) => {
+      if (active) {
+        if (p) {
+          setProfile({
+            ...defaultProfile,
+            ...p,
+            emergencyContacts: Array.isArray(p.emergencyContacts) ? p.emergencyContacts : [],
+          });
+        }
+        setMeds(Array.isArray(m) ? m : []);
+        isLoadedRef.current = true;
       }
-    } catch (e) {
-      console.error(e);
-    }
-    return []; // DO NOT auto-recommend medicines! Must be user-provided.
-  });
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -89,30 +95,16 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({
   const [mTime, setMTime] = useState<'morning' | 'afternoon' | 'evening' | 'bedtime'>('morning');
   const [mInstructions, setMInstructions] = useState('Take with water after food');
 
+  // Save profile securely when modified after initial load
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(profile);
-      const stored = localStorage.getItem(PROFILE_LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(PROFILE_LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    if (!isLoadedRef.current) return;
+    saveSecure(PROFILE_LOCAL_STORAGE_KEY, profile);
   }, [profile]);
 
+  // Save meds securely when modified after initial load
   useEffect(() => {
-    try {
-      const serialized = JSON.stringify(meds);
-      const stored = localStorage.getItem(MEDS_LOCAL_STORAGE_KEY);
-      if (stored !== serialized) {
-        localStorage.setItem(MEDS_LOCAL_STORAGE_KEY, serialized);
-        setTimeout(() => window.dispatchEvent(new Event('silverguard_data_updated')), 0);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    if (!isLoadedRef.current) return;
+    saveSecure(MEDS_LOCAL_STORAGE_KEY, meds);
   }, [meds]);
 
   const handleSaveProfile = () => {

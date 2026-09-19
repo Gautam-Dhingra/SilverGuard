@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Pill,
   CheckCircle2,
@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { MedicationItem } from '../types';
 import { AudioInputButton } from './AudioInputButton';
+import { VoiceAddMedicationModal } from './VoiceAddMedicationModal';
 import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
 import { getSecure, saveSecure } from '../services/cryptoStorage';
 
@@ -28,30 +29,35 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
   onNavigateToTab,
 }) => {
   const [meds, setMeds] = useState<MedicationItem[]>([]);
+  const isLoadedRef = useRef(false);
 
   // Load user-provided prescribed medicines with zero-knowledge AES-256 decryption
   useEffect(() => {
     let active = true;
     getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((res) => {
-      if (active && res) setMeds(res);
+      if (active) {
+        setMeds(Array.isArray(res) ? res : []);
+        isLoadedRef.current = true;
+      }
     });
     return () => {
       active = false;
     };
   }, []);
 
+  // Save meds on state change only after initial load, without infinite self-dispatch loop
   useEffect(() => {
-    saveSecure(MEDS_LOCAL_STORAGE_KEY, meds).then(() => {
-      window.dispatchEvent(new Event('silverguard_data_updated'));
-    });
+    if (!isLoadedRef.current) return;
+    saveSecure(MEDS_LOCAL_STORAGE_KEY, Array.isArray(meds) ? meds : []);
   }, [meds]);
 
-  // Re-sync with storage if updated externally
+  // Re-sync with storage if updated externally in another tab/view
   useEffect(() => {
     const handleSync = () => {
       getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((parsed) => {
         if (parsed) {
-          setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(parsed) ? prev : parsed));
+          const safeParsed = Array.isArray(parsed) ? parsed : [];
+          setMeds((prev) => (JSON.stringify(prev) === JSON.stringify(safeParsed) ? prev : safeParsed));
         }
       });
     };
@@ -74,9 +80,12 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
   const [newTimeOfDay, setNewTimeOfDay] = useState<'morning' | 'afternoon' | 'evening'>('morning');
   const [newInstructions, setNewInstructions] = useState('Take with water after food');
 
+  const safeMeds = Array.isArray(meds) ? meds : [];
+
   const toggleTaken = (id: string) => {
-    setMeds((prev) =>
-      prev.map((m) => {
+    setMeds((prev) => {
+      const arr = Array.isArray(prev) ? prev : [];
+      return arr.map((m) => {
         if (m.id === id) {
           const nextTaken = !m.takenToday;
           const time = nextTaken
@@ -88,8 +97,8 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
           return { ...m, takenToday: nextTaken, takenTime: time };
         }
         return m;
-      })
-    );
+      });
+    });
   };
 
   const handleAddMedication = (e: React.FormEvent) => {
@@ -146,7 +155,7 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
     }
   };
 
-  const filteredMeds = meds.filter(
+  const filteredMeds = safeMeds.filter(
     (m) => selectedTime === 'all' || m.timeOfDay === selectedTime
   );
 
@@ -323,114 +332,16 @@ export const MedicationTracker: React.FC<MedicationTrackerProps> = ({
       </div>
       )}
 
-      {/* Modal to Add Custom Medicine */}
-      {isAddModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs"
-        >
-          <div
-            className={`w-full max-w-xl rounded-3xl p-6 sm:p-8 border-4 shadow-2xl space-y-6 ${
-              highContrast
-                ? 'bg-black text-yellow-300 border-yellow-400'
-                : 'bg-white text-slate-900 border-amber-500'
-            }`}
-          >
-            <div className="flex items-center justify-between border-b-2 pb-4 border-slate-200">
-              <div className="flex items-center gap-3">
-                <Pill className="w-8 h-8 text-amber-600" aria-hidden="true" />
-                <h3 className="text-2xl font-extrabold">Add New Medicine</h3>
-              </div>
-              <button
-                onClick={() => setIsAddModalOpen(false)}
-                type="button"
-                className="p-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-900 min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer"
-              >
-                <X className="w-6 h-6" aria-hidden="true" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddMedication} className="space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-lg font-extrabold">
-                    Medicine Name (Dawai Ka Naam):
-                  </label>
-                  <AudioInputButton
-                    onTranscript={(text) =>
-                      setNewMedName((prev) => (prev ? `${prev} ${text}` : text))
-                    }
-                    label="Speak Name"
-                    highContrast={highContrast}
-                  />
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={newMedName}
-                  onChange={(e) => setNewMedName(e.target.value)}
-                  placeholder="e.g. Amlodipine 5mg or Crocin"
-                  className="w-full p-4 rounded-2xl border-2 border-slate-300 text-lg font-medium text-slate-900 bg-amber-50/50 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-lg font-extrabold mb-1">Dosage:</label>
-                  <input
-                    type="text"
-                    value={newDosage}
-                    onChange={(e) => setNewDosage(e.target.value)}
-                    placeholder="e.g. 1 tablet"
-                    className="w-full p-4 rounded-2xl border-2 border-slate-300 text-lg font-medium text-slate-900 bg-amber-50/50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-lg font-extrabold mb-1">Time of Day:</label>
-                  <select
-                    value={newTimeOfDay}
-                    onChange={(e: any) => setNewTimeOfDay(e.target.value)}
-                    className="w-full p-4 rounded-2xl border-2 border-slate-300 text-lg font-medium text-slate-900 bg-amber-50/50"
-                  >
-                    <option value="morning">Morning (Subah)</option>
-                    <option value="afternoon">Afternoon (Dopahar)</option>
-                    <option value="evening">Evening (Raat)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-lg font-extrabold mb-1">Instructions:</label>
-                <input
-                  type="text"
-                  value={newInstructions}
-                  onChange={(e) => setNewInstructions(e.target.value)}
-                  placeholder="e.g. Take with warm water after breakfast"
-                  className="w-full p-4 rounded-2xl border-2 border-slate-300 text-lg font-medium text-slate-900 bg-amber-50/50"
-                />
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="flex-1 py-4 rounded-2xl font-bold text-lg bg-slate-200 text-slate-800 hover:bg-slate-300 min-h-[56px]"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-4 rounded-2xl font-black text-lg bg-amber-600 text-white hover:bg-amber-700 min-h-[56px] shadow-lg cursor-pointer"
-                >
-                  Save Medicine
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal to Add Custom Medicine via Hands-free Voice Guided Assistant */}
+      <VoiceAddMedicationModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        highContrast={highContrast}
+        onReadAloud={onReadAloud}
+        onMedicationAdded={(newPill) => {
+          setMeds((prev) => [newPill, ...prev]);
+        }}
+      />
 
       {/* AI Pill Advice Modal / Expander */}
       {aiQuestionMed && (

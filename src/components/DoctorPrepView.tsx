@@ -12,7 +12,15 @@ import { generateDoctorPrepSheet } from '../services/geminiService';
 import { AudioInputButton } from './AudioInputButton';
 import { MedicationItem } from '../types';
 import { MEDS_LOCAL_STORAGE_KEY } from './UserProfileView';
-import { getSecure } from '../services/cryptoStorage';
+import { getSecure, saveSecure } from '../services/cryptoStorage';
+import { DoctorAppointmentBookingHelper } from './DoctorAppointmentBookingHelper';
+
+export const DOCTOR_PREP_LOCAL_STORAGE_KEY = 'silverguard_doctor_symptoms_v1';
+
+const defaultSymptoms = [
+  'Knee pain when taking stairs (Ghutne me dard)',
+  'Mild tiredness or stiffness in morning',
+];
 
 interface DoctorPrepViewProps {
   highContrast: boolean;
@@ -23,22 +31,36 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
   highContrast,
   onReadAloud,
 }) => {
-  const [symptoms, setSymptoms] = useState<string[]>([
-    'Knee pain when taking stairs (Ghutne me dard)',
-    'Mild tiredness or stiffness in morning',
-  ]);
+  const [symptoms, setSymptoms] = useState<string[]>(defaultSymptoms);
   const [newSymptom, setNewSymptom] = useState('');
-
-  // Asynchronously load real user-entered prescribed medicines with zero-knowledge AES-256 decryption
   const [medications, setMedications] = useState<string[]>([]);
+  const isLoadedRef = React.useRef(false);
 
   useEffect(() => {
-    getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []).then((saved) => {
-      if (saved && saved.length > 0) {
-        setMedications(saved.map((m) => `${m.name} (${m.dosage}) - ${m.instructions}`));
+    let active = true;
+    Promise.all([
+      getSecure<string[]>(DOCTOR_PREP_LOCAL_STORAGE_KEY, defaultSymptoms),
+      getSecure<MedicationItem[]>(MEDS_LOCAL_STORAGE_KEY, []),
+    ]).then(([savedSymptoms, savedMeds]) => {
+      if (active) {
+        if (Array.isArray(savedSymptoms) && savedSymptoms.length > 0) {
+          setSymptoms(savedSymptoms);
+        }
+        if (Array.isArray(savedMeds) && savedMeds.length > 0) {
+          setMedications(savedMeds.map((m) => `${m.name} (${m.dosage}) - ${m.instructions}`));
+        }
+        isLoadedRef.current = true;
       }
     });
+    return () => {
+      active = false;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+    saveSecure(DOCTOR_PREP_LOCAL_STORAGE_KEY, symptoms);
+  }, [symptoms]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [prepSheet, setPrepSheet] = useState<any | null>(null);
@@ -88,14 +110,20 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
-              Doctor Visit Prep Assistant (Doctor Parcha Guide)
+              Doctor Visit Prep & Daily Appointment Helper
             </h2>
             <p className="text-base sm:text-lg font-semibold opacity-90 mt-1">
-              Speak or type your health concerns and current medicines. SilverGuard AI will generate a neat, printable question list for your doctor.
+              Book doctor appointments, select specialists, schedule dates, organize travel & cabs, and log health concerns for your doctor visit.
             </p>
           </div>
         </div>
       </div>
+
+      {/* Feature 1: Interactive Daily Doctor Appointment Booking Helper */}
+      <DoctorAppointmentBookingHelper
+        highContrast={highContrast}
+        onReadAloud={onReadAloud}
+      />
 
       {/* Symptoms & Questions Logger */}
       <div

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Users,
   Heart,
@@ -32,12 +32,14 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
   onNavigateToTab,
 }) => {
   const [updates, setUpdates] = useState<FamilyUpdate[]>([]);
+  const isLoadedRef = useRef(false);
 
   useEffect(() => {
     let active = true;
     getSecure<FamilyUpdate[]>(LOCAL_STORAGE_KEY, []).then((res) => {
-      if (active && res) {
-        setUpdates(res);
+      if (active) {
+        setUpdates(Array.isArray(res) ? res : []);
+        isLoadedRef.current = true;
       }
     });
     return () => {
@@ -58,9 +60,8 @@ export const FamilyConnectorView: React.FC<FamilyConnectorViewProps> = ({
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    saveSecure(LOCAL_STORAGE_KEY, updates).then(() => {
-      window.dispatchEvent(new Event('silverguard_data_updated'));
-    });
+    if (!isLoadedRef.current) return;
+    saveSecure(LOCAL_STORAGE_KEY, updates);
   }, [updates]);
 
   useEffect(() => {
