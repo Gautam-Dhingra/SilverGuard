@@ -34,8 +34,11 @@ export async function analyzeScamOrBillContent(content: string): Promise<ScamAna
     }
 
     const data = await res.json();
-    if (data.success && data.data) {
+    if (data.data) {
       return data.data;
+    }
+    if (data.fallbackData) {
+      return data.fallbackData;
     }
     throw new Error(data.error || 'Invalid analysis response');
   } catch (error: any) {

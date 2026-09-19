@@ -1,6 +1,6 @@
 {
-  "name": "SilverGuard Companion",
-  "description": "An accessible, GenAI-powered daily companion for senior citizens to manage medications, detect scams, simplify bills, and navigate technology with voice control.",
+  "name": "SilverGuard India - Senior AI Companion",
+  "description": "An accessible voice-guided AI companion for Indian senior citizens (Dada-Dadi & Nana-Nani) for scam detection, bill analysis, medication reminders, doctor visit prep, and family WhatsApp replies in Indian regional languages.",
   "requestFramePermissions": [
     "microphone"
   ],

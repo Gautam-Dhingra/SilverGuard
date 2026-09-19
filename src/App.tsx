@@ -18,6 +18,7 @@ import { ScamCheckerNav } from './components/ScamCheckerNav';
 import { MedicationTracker } from './components/MedicationTracker';
 import { DoctorPrepView } from './components/DoctorPrepView';
 import { FamilyConnectorView } from './components/FamilyConnectorView';
+import { UserProfileView } from './components/UserProfileView';
 import { TestCaseSandboxView } from './components/TestCaseSandboxView';
 
 export default function App() {
@@ -82,6 +83,10 @@ export default function App() {
       speak(
         'You are on the Family Updates screen. Read messages from family and draft warm replies.'
       );
+    } else if (activeTab === 'profile') {
+      speak(
+        'You are on the Profile and Routine screen. Set your prescribed medicines, daily schedule, and at least three family emergency contacts.'
+      );
     } else if (activeTab === 'test-cases') {
       speak(
         'You are on the Test Use Cases Sandbox. Select a scenario and run live AI test cases.'
@@ -104,7 +109,7 @@ export default function App() {
     onStopReading: stop,
   });
 
-  // Handle keyboard navigation shortcuts (Alt+1 through Alt+6)
+  // Handle keyboard navigation shortcuts (Alt+1 through Alt+7)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.altKey) {
@@ -113,7 +118,8 @@ export default function App() {
         if (e.key === '3') handleNavigate('medications');
         if (e.key === '4') handleNavigate('doctor-prep');
         if (e.key === '5') handleNavigate('family-social');
-        if (e.key === '6') handleNavigate('test-cases');
+        if (e.key === '6') handleNavigate('profile');
+        if (e.key === '7') handleNavigate('test-cases');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -187,6 +193,7 @@ export default function App() {
           <MedicationTracker
             highContrast={settings.highContrast}
             onReadAloud={speak}
+            onNavigateToTab={handleNavigate}
           />
         )}
 
@@ -201,6 +208,14 @@ export default function App() {
           <FamilyConnectorView
             highContrast={settings.highContrast}
             onReadAloud={speak}
+          />
+        )}
+
+        {activeTab === 'profile' && (
+          <UserProfileView
+            highContrast={settings.highContrast}
+            onReadAloud={speak}
+            onNavigateToTab={handleNavigate}
           />
         )}
 

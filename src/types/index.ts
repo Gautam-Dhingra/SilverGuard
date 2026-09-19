@@ -6,11 +6,45 @@ export type NavigationTab =
   | 'medications'
   | 'doctor-prep'
   | 'family-social'
+  | 'profile'
   | 'test-cases';
+
+export interface EmergencyContact {
+  id: string;
+  name: string;
+  relation: string;
+  phone: string;
+  priority: number; // 1, 2, 3...
+  isPrimary?: boolean;
+}
+
+export interface UserDailyRoutine {
+  wakeupTime: string;
+  breakfastTime: string;
+  lunchTime: string;
+  eveningWalkTime: string;
+  dinnerTime: string;
+  bedTime: string;
+  bpSugarCheckTime?: string;
+  specialNotes?: string;
+}
+
+export interface SeniorUserProfile {
+  seniorName: string;
+  city: string;
+  dailyRoutine: UserDailyRoutine;
+  emergencyContacts: EmergencyContact[]; // Must store at least 3
+}
 
 export interface TestCaseScenario {
   id: string;
-  category: 'Scam & Security' | 'Doctor Prep' | 'Family Reply' | 'Companion Chat' | 'Voice & Accessibility';
+  category:
+    | 'Scam & Security'
+    | 'Doctor Prep'
+    | 'Family Reply'
+    | 'Companion Chat'
+    | 'Voice & Accessibility'
+    | 'Emergency Calling Agent';
   title: string;
   targetTab: NavigationTab;
   description: string;

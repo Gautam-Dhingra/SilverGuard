@@ -136,6 +136,24 @@ export const TestCaseSandboxView: React.FC<TestCaseSandboxViewProps> = ({
         'Verify voice command bar triggers active listening state.',
       ],
     },
+    {
+      id: 'tc-emergency-7',
+      category: 'Emergency Calling Agent',
+      title: 'Test Case 7: Emergency 3-Contact Sequential Calling & Location Broadcast',
+      targetTab: 'profile',
+      description:
+        'Verifies emergency sequence: dials 3 saved family contacts sequentially with 12s rollover, voice speech, tone audio, and Indian official helplines (112, 14567, 1930, 108).',
+      sampleInput:
+        'Emergency Contacts: Contact 1: Rohan (+91 9876543210), Contact 2: Pooja (+91 9876543211), Contact 3: Ramesh (+91 9876543212)',
+      expectedOutcome:
+        'Active Calling Agent screen pops up, speaks audio alerts, triggers phone ringtone, broadcasts location, and offers 1-tap direct dial or simulation.',
+      verificationSteps: [
+        'Open Emergency Modal or Profile & Emergency Contacts.',
+        'Click "START EMERGENCY CALLING AGENT NOW".',
+        'Verify speech output and 12-second rollover timer to Contact 2 & Contact 3.',
+        'Test "Simulate Answer" button to confirm voice response feedback.',
+      ],
+    },
   ];
 
   const [activeScenario, setActiveScenario] = useState<TestCaseScenario>(testScenarios[0]);

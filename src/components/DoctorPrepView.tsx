@@ -6,11 +6,10 @@ import {
   Sparkles,
   Volume2,
   Printer,
-  CheckCircle2,
-  HelpCircle,
   FileText,
 } from 'lucide-react';
 import { generateDoctorPrepSheet } from '../services/geminiService';
+import { AudioInputButton } from './AudioInputButton';
 
 interface DoctorPrepViewProps {
   highContrast: boolean;
@@ -22,22 +21,24 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
   onReadAloud,
 }) => {
   const [symptoms, setSymptoms] = useState<string[]>([
-    'Mild knee pain when going down stairs',
-    'Feeling a bit dizzy in the afternoon',
+    'Knee pain when taking stairs (Ghutne me dard)',
+    'Afternoon dizziness or tiredness after BP tablet',
   ]);
   const [newSymptom, setNewSymptom] = useState('');
 
   const [medications] = useState<string[]>([
-    'Lisinopril 10mg (Blood Pressure)',
-    'Metformin 500mg (Blood Sugar)',
+    'Telmisartan 40mg (Blood Pressure / BP)',
+    'Glycomet 500mg (Blood Sugar / Diabetes)',
+    'Pantocid 40mg (Acidity)',
   ]);
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [prepSheet, setPrepSheet] = useState<any | null>(null);
 
-  const addSymptom = () => {
-    if (newSymptom.trim()) {
-      setSymptoms((prev) => [...prev, newSymptom.trim()]);
+  const addSymptom = (textToAdd?: string) => {
+    const val = textToAdd || newSymptom;
+    if (val.trim()) {
+      setSymptoms((prev) => [...prev, val.trim()]);
       setNewSymptom('');
     }
   };
@@ -79,10 +80,10 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
-              Doctor Visit Prep Assistant
+              Doctor Visit Prep Assistant (Doctor Parcha Guide)
             </h2>
             <p className="text-base sm:text-lg font-semibold opacity-90 mt-1">
-              Log your symptoms and concerns. AI will organize questions to ask your doctor.
+              Speak or type your health concerns and current medicines. SilverGuard AI will generate a neat, printable question list for your doctor.
             </p>
           </div>
         </div>
@@ -96,7 +97,16 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
             : 'bg-white border-amber-200 text-slate-900'
         }`}
       >
-        <h3 className="text-2xl font-extrabold">1. Log Your Symptoms & Questions:</h3>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-2xl font-extrabold">1. Log Symptoms & Health Questions:</h3>
+          <AudioInputButton
+            onTranscript={(text) => {
+              setNewSymptom((prev) => (prev ? `${prev} ${text}` : text));
+            }}
+            label="Speak Symptom (Awaaz Se)"
+            highContrast={highContrast}
+          />
+        </div>
 
         <div className="flex gap-2">
           <input
@@ -104,7 +114,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
             value={newSymptom}
             onChange={(e) => setNewSymptom(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && addSymptom()}
-            placeholder="Type e.g., 'Lower back ache in morning' or 'Question about prescription'..."
+            placeholder="Type or speak e.g. 'Sar me dard' or 'Question about Sugar dosage'..."
             className={`flex-1 p-4 rounded-2xl border-3 text-lg font-medium focus-visible:outline-none focus-visible:ring-4 ${
               highContrast
                 ? 'bg-zinc-900 border-yellow-400 text-white placeholder:text-zinc-500'
@@ -112,9 +122,9 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
             }`}
           />
           <button
-            onClick={addSymptom}
+            onClick={() => addSymptom()}
             type="button"
-            className="px-6 py-4 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 min-h-[60px] flex items-center justify-center gap-2"
+            className="px-6 py-4 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 min-h-[60px] flex items-center justify-center gap-2 cursor-pointer"
           >
             <Plus className="w-6 h-6" aria-hidden="true" />
             <span>Add</span>
@@ -132,7 +142,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
               <button
                 onClick={() => removeSymptom(idx)}
                 type="button"
-                className="p-2 text-red-600 hover:bg-red-100 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center"
+                className="p-2 text-red-600 hover:bg-red-100 rounded-xl min-h-[48px] min-w-[48px] flex items-center justify-center cursor-pointer"
                 aria-label={`Remove symptom ${item}`}
               >
                 <Trash2 className="w-6 h-6" aria-hidden="true" />
@@ -145,7 +155,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
           onClick={handleGenerate}
           disabled={symptoms.length === 0 || isGenerating}
           type="button"
-          className="w-full py-4 rounded-2xl font-black text-xl bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50 min-h-[64px] shadow-lg flex items-center justify-center gap-3 focus-visible:ring-4"
+          className="w-full py-4 rounded-2xl font-black text-xl bg-blue-700 text-white hover:bg-blue-800 disabled:opacity-50 min-h-[64px] shadow-lg flex items-center justify-center gap-3 focus-visible:ring-4 cursor-pointer"
         >
           {isGenerating ? (
             <>
@@ -155,7 +165,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
           ) : (
             <>
               <FileText className="w-6 h-6" aria-hidden="true" />
-              <span>Generate Printable Doctor Sheet with AI</span>
+              <span>Generate Printable Doctor Parcha Guide with AI</span>
             </>
           )}
         </button>
@@ -184,7 +194,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
                   )
                 }
                 type="button"
-                className="px-4 py-2.5 rounded-xl font-bold bg-white text-blue-900 border-2 border-blue-300 hover:bg-blue-100 min-h-[48px] flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl font-bold bg-white text-blue-900 border-2 border-blue-300 hover:bg-blue-100 min-h-[48px] flex items-center gap-2 cursor-pointer"
               >
                 <Volume2 className="w-5 h-5 text-blue-700" aria-hidden="true" />
                 <span>Read Sheet</span>
@@ -193,7 +203,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
               <button
                 onClick={() => window.print()}
                 type="button"
-                className="px-4 py-2.5 rounded-xl font-bold bg-blue-700 text-white hover:bg-blue-800 min-h-[48px] flex items-center gap-2"
+                className="px-4 py-2.5 rounded-xl font-bold bg-blue-700 text-white hover:bg-blue-800 min-h-[48px] flex items-center gap-2 cursor-pointer"
               >
                 <Printer className="w-5 h-5" aria-hidden="true" />
                 <span>Print Sheet</span>
@@ -207,7 +217,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
 
           <div className="space-y-3">
             <h4 className="text-xl font-extrabold text-blue-950">
-              📋 Questions to Ask Your Doctor:
+              📋 Key Questions to Ask Your Doctor:
             </h4>
             <ul className="space-y-2">
               {prepSheet.questionsList?.map((q: string, i: number) => (
@@ -224,7 +234,7 @@ export const DoctorPrepView: React.FC<DoctorPrepViewProps> = ({
 
           <div className="space-y-3">
             <h4 className="text-xl font-extrabold text-blue-950">
-              💊 Medication Review Notes:
+              💊 Medication & Refill Review:
             </h4>
             <p className="text-lg font-medium bg-white p-4 rounded-2xl border border-blue-200">
               {prepSheet.medicationsSummary}

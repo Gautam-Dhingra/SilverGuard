@@ -6,13 +6,13 @@ import {
   FileText,
   Volume2,
   Sparkles,
-  ArrowRight,
   CheckCircle2,
   Copy,
   Check,
 } from 'lucide-react';
 import { ScamAnalysisResult } from '../types';
 import { analyzeScamOrBillContent } from '../services/geminiService';
+import { AudioInputButton } from './AudioInputButton';
 
 interface ScamCheckerNavProps {
   highContrast: boolean;
@@ -30,16 +30,20 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
 
   const sampleInputs = [
     {
-      title: 'Suspicious Bank SMS',
-      text: 'URGENT: Your Chase Bank account is suspended due to unusual activity. Click http://chase-security-verify.net to unlock within 2 hours or pay $250 fee.',
+      title: 'Electricity Power Disconnection SMS',
+      text: 'Dear Consumer, your electricity power line will be disconnected tonight at 9:30 PM from discom office due to previous month bill update. Immediately call Electricity Officer at 9812345678 to avoid blackouts.',
     },
     {
-      title: 'Legitimate Electric Bill',
-      text: 'City Electric Utility: Your monthly statement for August is $112.50. Automatic payment will process on Sept 25 from account ending in 4321.',
+      title: 'SBI / HDFC YONO APK Scam',
+      text: 'SBI Urgent Notice: Dear customer, your YONO NetBanking account is suspended due to pending Aadhaar KYC. Download & install SBI_YONO_Unblock.apk file immediately to verify account.',
     },
     {
-      title: 'Unclaimed Prize Call Script',
-      text: 'Congratulations! You won a $5,000 Walmart Gift Card! To claim your reward, send a $50 processing fee via Target Gift Card code immediately.',
+      title: 'TRAI / Police Digital Arrest Scam',
+      text: 'TRAI Urgent Alert: Your mobile number is associated with illegal financial harassment and money laundering. CBI / Cyber Police has issued arrest warrant. Stay on call or face immediate police visit.',
+    },
+    {
+      title: 'Legitimate BSES Electricity Bill',
+      text: 'BSES Rajdhani Power Limited: Your monthly electricity bill for August is ₹2,450. Due date is 25th Sept. Pay online via official BSES portal or Paytm with Bill ID 400192837.',
     },
   ];
 
@@ -83,10 +87,10 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
-              Scam & Bill Safeguard
+              Indian Scam & Bill Safeguard (Khatra & Bijli Bill Checker)
             </h2>
             <p className="text-base sm:text-lg font-semibold opacity-90 mt-1">
-              Paste any text, email, or bill here. Gemini AI will check for fraud tactics and explain it simply.
+              Speak or paste any SMS, WhatsApp text, APK link, or electricity bill. SilverGuard AI will check for fraud and guide you safely in simple language.
             </p>
           </div>
         </div>
@@ -100,19 +104,29 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
             : 'bg-white border-amber-200 text-slate-900'
         }`}
       >
-        <label
-          htmlFor="scam-input-text"
-          className="block text-xl font-extrabold"
-        >
-          Paste Message or Bill Text Below:
-        </label>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <label
+            htmlFor="scam-input-text"
+            className="block text-xl font-extrabold"
+          >
+            Type, Paste, or Speak Message Below:
+          </label>
+
+          <AudioInputButton
+            onTranscript={(text) =>
+              setInputText((prev) => (prev ? `${prev} ${text}` : text))
+            }
+            label="Speak Message (Awaaz Se Bolen)"
+            highContrast={highContrast}
+          />
+        </div>
 
         <textarea
           id="scam-input-text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
           rows={4}
-          placeholder="Paste suspicious text message, email, or letter content here..."
+          placeholder="Paste suspicious SMS, WhatsApp message, electricity bill, or speak using the voice button..."
           className={`w-full p-4 rounded-2xl border-3 text-lg font-medium focus-visible:outline-none focus-visible:ring-4 ${
             highContrast
               ? 'bg-zinc-900 border-yellow-400 text-white placeholder:text-zinc-500'
@@ -120,10 +134,10 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
           }`}
         />
 
-        {/* Preset Sample Buttons for Evaluator Testing */}
+        {/* Preset Sample Buttons */}
         <div className="space-y-2">
           <span className="text-sm sm:text-base font-bold opacity-80">
-            Or test with an instant example:
+            Or test with common Indian scam/bill examples:
           </span>
           <div className="flex flex-wrap gap-2">
             {sampleInputs.map((sample, idx) => (
@@ -134,7 +148,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
                   setInputText(sample.text);
                   handleAnalyze(sample.text);
                 }}
-                className="px-4 py-2.5 rounded-xl font-bold text-sm sm:text-base bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 min-h-[48px]"
+                className="px-4 py-2.5 rounded-xl font-bold text-sm sm:text-base bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300 min-h-[48px] cursor-pointer"
               >
                 🔍 {sample.title}
               </button>
@@ -146,12 +160,12 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
           onClick={() => handleAnalyze()}
           disabled={!inputText.trim() || isAnalyzing}
           type="button"
-          className="w-full py-4 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 min-h-[60px] shadow-lg flex items-center justify-center gap-2 focus-visible:ring-4"
+          className="w-full py-4 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 min-h-[60px] shadow-lg flex items-center justify-center gap-2 focus-visible:ring-4 cursor-pointer"
         >
           {isAnalyzing ? (
             <>
               <Sparkles className="w-6 h-6 animate-spin" aria-hidden="true" />
-              <span>Analyzing Fraud Risk & Simplifying...</span>
+              <span>Checking Fraud Risk & Simplifying...</span>
             </>
           ) : (
             <>
@@ -208,7 +222,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
                 onReadAloud(`${analysis.title}. ${analysis.simpleSummary}`)
               }
               type="button"
-              className="px-4 py-2.5 rounded-xl font-bold bg-white text-slate-900 border-2 border-slate-300 hover:bg-slate-100 text-base min-h-[48px] flex items-center gap-2"
+              className="px-4 py-2.5 rounded-xl font-bold bg-white text-slate-900 border-2 border-slate-300 hover:bg-slate-100 text-base min-h-[48px] flex items-center gap-2 cursor-pointer"
             >
               <Volume2 className="w-5 h-5 text-amber-700" aria-hidden="true" />
               <span>Read Aloud</span>
@@ -217,7 +231,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
 
           {/* Simple Explanation */}
           <div className="space-y-2">
-            <h4 className="text-xl font-extrabold">Plain English Explanation:</h4>
+            <h4 className="text-xl font-extrabold">Simple Explanation:</h4>
             <p className="text-lg sm:text-xl font-medium leading-relaxed bg-white/80 p-4 rounded-2xl border border-slate-200">
               {analysis.simpleSummary}
             </p>
@@ -246,7 +260,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
           {/* Recommended Action Checklist */}
           <div className="space-y-2">
             <h4 className="text-xl font-extrabold">
-              👉 What You Should Do Next:
+              👉 What You Should Do Right Now:
             </h4>
             <ol className="space-y-2">
               {analysis.recommendedSteps.map((step, i) => (
@@ -274,7 +288,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
                 <button
                   onClick={() => copyDraft(analysis.safeReplyDraft!)}
                   type="button"
-                  className="px-5 py-3 rounded-xl font-bold bg-amber-600 text-white hover:bg-amber-700 min-h-[52px] flex items-center justify-center gap-2"
+                  className="px-5 py-3 rounded-xl font-bold bg-amber-600 text-white hover:bg-amber-700 min-h-[52px] flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {copied ? (
                     <>
@@ -284,7 +298,7 @@ export const ScamCheckerNav: React.FC<ScamCheckerNavProps> = ({
                   ) : (
                     <>
                       <Copy className="w-5 h-5" aria-hidden="true" />
-                      <span>Copy Reply</span>
+                      <span>Copy Safe Reply</span>
                     </>
                   )}
                 </button>

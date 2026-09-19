@@ -4,15 +4,14 @@ import {
   Send,
   Volume2,
   Sparkles,
-  HelpCircle,
   Sun,
-  ShieldCheck,
-  RotateCcw,
   Bot,
   User,
+  Languages,
 } from 'lucide-react';
 import { ChatMessage } from '../types';
 import { sendCompanionChatMessage } from '../services/geminiService';
+import { AudioInputButton } from './AudioInputButton';
 
 interface CompanionViewProps {
   highContrast: boolean;
@@ -27,17 +26,19 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
   onReadAloud,
   onNavigateToTab,
 }) => {
+  const [selectedLanguage, setSelectedLanguage] = useState<'hi-IN' | 'en-IN' | 'ta-IN' | 'te-IN' | 'bn-IN' | 'mr-IN' | 'gu-IN' | 'pa-IN' | 'kn-IN' | 'ml-IN'>('hi-IN');
+
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       sender: 'assistant',
-      text: "Good morning! I am SilverGuard, your personal daily companion. How are you feeling today? You can ask me anything about managing your day, understanding bills, setting reminders, or staying safe online.",
+      text: "Namaste! Main SilverGuard, aapka personal daily AI companion. How are you feeling today? Ask me anything in English, Hindi, Hinglish or your regional language — about daily medicines, suspicious SMS/bills, or family messages!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       suggestedActions: [
-        'Check my daily pills',
-        'Is my latest bill correct?',
-        'How do I video call my family?',
-        'Tell me a warm joke',
+        'Aaj ki dawai schedule batao (Check Pills)',
+        'Electricity bill ya SMS scam check karo',
+        'Doctor se milne se pehle kya poochun?',
+        'Family ko WhatsApp reply draft karo',
       ],
     },
   ]);
@@ -65,7 +66,6 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
     setInput('');
     setIsLoading(true);
 
-    // Format previous messages for AI
     const history = messages
       .slice(-6)
       .map((m) => ({
@@ -87,7 +87,6 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, assistantMsg]);
-      // Speak AI response for convenience
       onReadAloud(responseText);
     } catch (err) {
       console.error(err);
@@ -98,7 +97,7 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Morning Proactive Check-In Banner */}
+      {/* Morning Overview Banner for Indian Seniors */}
       <div
         className={`p-6 rounded-3xl border-4 shadow-lg flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
           highContrast
@@ -112,28 +111,28 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
           </div>
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
-              Today's Overview
+              Pranam! Today's Daily Summary
             </h2>
             <p className="text-base sm:text-lg font-semibold opacity-90 mt-1">
-              You have 2 morning medications scheduled for 9:00 AM, and 1 new message from family.
+              Set your doctor-prescribed medicines, daily routine, and 3 emergency contacts anytime in Profile & Routine.
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap gap-2 w-full md:w-auto">
           <button
-            onClick={() => onNavigateToTab('medications')}
+            onClick={() => onNavigateToTab('profile')}
             type="button"
-            className="flex-1 md:flex-none px-5 py-3 rounded-2xl font-black bg-amber-700 text-white hover:bg-amber-800 text-base sm:text-lg min-h-[56px]"
+            className="flex-1 md:flex-none px-5 py-3 rounded-2xl font-black bg-amber-700 text-white hover:bg-amber-800 text-base sm:text-lg min-h-[56px] cursor-pointer"
           >
-            Check Pills
+            Profile & Emergency Contacts
           </button>
           <button
-            onClick={() => onNavigateToTab('family-social')}
+            onClick={() => onNavigateToTab('medications')}
             type="button"
-            className="flex-1 md:flex-none px-5 py-3 rounded-2xl font-black bg-emerald-700 text-white hover:bg-emerald-800 text-base sm:text-lg min-h-[56px]"
+            className="flex-1 md:flex-none px-5 py-3 rounded-2xl font-black bg-slate-800 text-white hover:bg-slate-900 text-base sm:text-lg min-h-[56px] cursor-pointer"
           >
-            Family Updates
+            Prescribed Medicines
           </button>
         </div>
       </div>
@@ -146,34 +145,58 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
             : 'bg-white border-amber-200 text-slate-900'
         }`}
       >
-        <div className="flex items-center justify-between border-b-2 pb-4 border-amber-200">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 pb-4 border-amber-200">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-amber-600 text-white rounded-2xl">
               <Sparkles className="w-7 h-7" aria-hidden="true" />
             </div>
             <div>
               <h3 className="text-xl sm:text-2xl font-extrabold">
-                Ask SilverGuard AI
+                Ask SilverGuard AI (Poochiye)
               </h3>
               <p className="text-sm sm:text-base font-semibold opacity-80">
-                Warm, patient answers in simple terms
+                Warm Indian AI guide in simple language
               </p>
             </div>
           </div>
 
-          <button
-            onClick={() =>
-              onReadAloud(
-                messages[messages.length - 1]?.text || 'No message to read'
-              )
-            }
-            type="button"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 text-base min-h-[48px]"
-            aria-label="Read last message aloud"
-          >
-            <Volume2 className="w-5 h-5" aria-hidden="true" />
-            <span className="hidden sm:inline">Read Aloud</span>
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Language Picker */}
+            <div className="flex items-center gap-1.5 bg-amber-100 p-2 rounded-xl text-amber-950 font-bold text-sm">
+              <Languages className="w-5 h-5 text-amber-700 shrink-0" aria-hidden="true" />
+              <select
+                value={selectedLanguage}
+                onChange={(e: any) => setSelectedLanguage(e.target.value)}
+                className="bg-transparent font-bold focus:outline-none cursor-pointer"
+                title="Select Voice & Recognition Language"
+              >
+                <option value="hi-IN">Hindi (हिंदी / Hinglish)</option>
+                <option value="en-IN">English (India)</option>
+                <option value="ta-IN">Tamil (தமிழ்)</option>
+                <option value="te-IN">Telugu (తెలుగు)</option>
+                <option value="bn-IN">Bengali (বাংলা)</option>
+                <option value="mr-IN">Marathi (मराठी)</option>
+                <option value="gu-IN">Gujarati (ગુજરાતી)</option>
+                <option value="pa-IN">Punjabi (ਪੰਜਾਬੀ)</option>
+                <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+                <option value="ml-IN">Malayalam (മലയാളം)</option>
+              </select>
+            </div>
+
+            <button
+              onClick={() =>
+                onReadAloud(
+                  messages[messages.length - 1]?.text || 'No message to read'
+                )
+              }
+              type="button"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold bg-amber-100 text-amber-900 hover:bg-amber-200 text-base min-h-[48px] cursor-pointer"
+              aria-label="Read last message aloud"
+            >
+              <Volume2 className="w-5 h-5" aria-hidden="true" />
+              <span className="hidden sm:inline">Suniyen (Listen)</span>
+            </button>
+          </div>
         </div>
 
         {/* Message Cards */}
@@ -210,7 +233,7 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
                 <div className="space-y-2 flex-1">
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold text-base sm:text-lg">
-                      {isAsst ? 'SilverGuard Assistant' : 'You'}
+                      {isAsst ? 'SilverGuard Assistant' : 'Aap (You)'}
                     </span>
                     <span className="text-xs sm:text-sm opacity-75">{msg.timestamp}</span>
                   </div>
@@ -227,7 +250,7 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
                           key={idx}
                           onClick={() => handleSend(action)}
                           type="button"
-                          className="px-4 py-2.5 rounded-xl font-bold text-base bg-amber-200 text-amber-950 hover:bg-amber-300 min-h-[48px] border border-amber-400 focus-visible:ring-4"
+                          className="px-4 py-2.5 rounded-xl font-bold text-base bg-amber-200 text-amber-950 hover:bg-amber-300 min-h-[48px] border border-amber-400 focus-visible:ring-4 cursor-pointer"
                         >
                           👉 {action}
                         </button>
@@ -240,11 +263,11 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
                     <button
                       onClick={() => onReadAloud(msg.text)}
                       type="button"
-                      className="text-xs sm:text-sm font-bold flex items-center gap-1.5 opacity-80 hover:opacity-100 p-1 underline"
+                      className="text-xs sm:text-sm font-bold flex items-center gap-1.5 opacity-80 hover:opacity-100 p-1 underline cursor-pointer"
                       aria-label="Read this response aloud"
                     >
                       <Volume2 className="w-4 h-4" aria-hidden="true" />
-                      <span>Listen</span>
+                      <span>Suniyen</span>
                     </button>
                   </div>
                 </div>
@@ -262,35 +285,48 @@ export const CompanionView: React.FC<CompanionViewProps> = ({
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input Bar */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            handleSend();
-          }}
-          className="flex flex-col sm:flex-row gap-3 pt-2"
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your question here in plain words..."
-            className={`flex-1 p-4 sm:p-5 rounded-2xl border-3 font-medium text-lg sm:text-xl focus-visible:outline-none focus-visible:ring-4 ${
-              highContrast
-                ? 'bg-zinc-900 border-yellow-400 text-white placeholder:text-zinc-500'
-                : 'bg-white border-amber-300 text-slate-900 placeholder:text-slate-400'
-            }`}
-          />
+        {/* Input Bar with Direct Mic Audio Input */}
+        <div className="space-y-3 pt-2">
+          <div className="flex flex-col sm:flex-row items-stretch gap-3">
+            <AudioInputButton
+              onTranscript={(text) =>
+                setInput((prev) => (prev ? `${prev} ${text}` : text))
+              }
+              label="Awaaz Se Bolen (Mic Input)"
+              language={selectedLanguage}
+              highContrast={highContrast}
+            />
 
-          <button
-            type="submit"
-            disabled={!input.trim() || isLoading}
-            className="px-8 py-4 sm:py-5 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 min-h-[64px] flex items-center justify-center gap-2 shadow-lg focus-visible:ring-4"
-          >
-            <span>Ask AI</span>
-            <Send className="w-6 h-6" aria-hidden="true" />
-          </button>
-        </form>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSend();
+              }}
+              className="flex-1 flex gap-3"
+            >
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Yahan type karein ya Awaaz button dabayein..."
+                className={`flex-1 p-4 sm:p-5 rounded-2xl border-3 font-medium text-lg sm:text-xl focus-visible:outline-none focus-visible:ring-4 ${
+                  highContrast
+                    ? 'bg-zinc-900 border-yellow-400 text-white placeholder:text-zinc-500'
+                    : 'bg-white border-amber-300 text-slate-900 placeholder:text-slate-400'
+                }`}
+              />
+
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="px-8 py-4 sm:py-5 rounded-2xl font-black text-xl bg-amber-600 text-white hover:bg-amber-700 disabled:opacity-50 min-h-[64px] flex items-center justify-center gap-2 shadow-lg focus-visible:ring-4 cursor-pointer shrink-0"
+              >
+                <span>Poochiye</span>
+                <Send className="w-6 h-6" aria-hidden="true" />
+              </button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );
