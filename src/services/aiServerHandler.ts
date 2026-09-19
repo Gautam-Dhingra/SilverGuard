@@ -226,7 +226,10 @@ Do NOT include markdown wrapping around JSON if possible, just raw JSON.
   }
 }
 
-export async function handleDoctorVisitPrep(symptomsAndConcerns: string[], currentMedications: string[]) {
+export async function handleDoctorVisitPrep(symptomsInput: string[] | string, medsInput: string[] | string) {
+  const symptomsAndConcerns = Array.isArray(symptomsInput) ? symptomsInput : [symptomsInput || ''];
+  const currentMedications = Array.isArray(medsInput) ? medsInput : [medsInput || ''];
+
   const fallbackData = {
     summary: 'Doctor Visit Summary & Question Guide prepared for your appointment.',
     keyPointsForDoctor: [
