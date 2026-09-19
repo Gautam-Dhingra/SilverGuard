@@ -1,0 +1,10 @@
+{
+  "name": "SilverGuard Companion",
+  "description": "An accessible, GenAI-powered daily companion for senior citizens to manage medications, detect scams, simplify bills, and navigate technology with voice control.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
